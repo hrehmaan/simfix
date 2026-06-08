@@ -2,6 +2,7 @@ from pathlib import Path
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.repo import is_git_url, repo_name_from_url
 
 
 def test_version() -> None:
@@ -30,3 +31,13 @@ def test_analyze_ros_cmake_repo(tmp_path: Path) -> None:
     assert analysis.has_cmake is True
     assert "ros" in analysis.detected_ecosystems
     assert "cmake/c++" in analysis.detected_ecosystems
+
+
+def test_is_git_url() -> None:
+    assert is_git_url("https://github.com/hrehmaan/simfix.git") is True
+    assert is_git_url("../simfix_test") is False
+
+
+def test_repo_name_from_url() -> None:
+    assert repo_name_from_url("https://github.com/hrehmaan/simfix.git") == "simfix"
+    assert repo_name_from_url("https://github.com/hrehmaan/simfix") == "simfix"
