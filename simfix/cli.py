@@ -48,6 +48,15 @@ def doctor(repo: str) -> None:
     ecosystems = ", ".join(analysis.detected_ecosystems)
     console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
 
+    if analysis.python_requirements:
+        deps_table = Table(title="Python packages")
+        deps_table.add_column("Dependency", style="cyan")
+
+        for dependency in analysis.python_requirements:
+            deps_table.add_row(dependency)
+
+        console.print(deps_table)
+
     if "docker" in analysis.detected_ecosystems:
         console.print(
             "[yellow]Recommendation:[/yellow] Docker installation may be available."

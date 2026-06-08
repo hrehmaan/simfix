@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from simfix.python_requirements import parse_requirements_file
+
 
 @dataclass(frozen=True)
 class RepoAnalysis:
@@ -15,6 +17,7 @@ class RepoAnalysis:
     has_dockerfile: bool
     has_package_xml: bool
     has_cmake: bool
+    python_requirements: list[str]
 
     @property
     def detected_ecosystems(self) -> list[str]:
@@ -52,13 +55,16 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
     if not path.is_dir():
         raise NotADirectoryError(f"Repository path is not a directory: {path}")
 
+    requirements_path = path / "requirements.txt"
+
     return RepoAnalysis(
         repo_path=path,
-        has_requirements_txt=(path / "requirements.txt").exists(),
+        has_requirements_txt=requirements_path.exists(),
         has_pyproject_toml=(path / "pyproject.toml").exists(),
         has_environment_yml=(path / "environment.yml").exists()
         or (path / "environment.yaml").exists(),
         has_dockerfile=(path / "Dockerfile").exists(),
         has_package_xml=(path / "package.xml").exists(),
         has_cmake=(path / "CMakeLists.txt").exists(),
+        python_requirements=parse_requirements_file(requirements_path),
     )

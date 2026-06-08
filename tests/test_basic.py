@@ -2,6 +2,7 @@ from pathlib import Path
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
 
 
@@ -17,6 +18,7 @@ def test_analyze_python_repo(tmp_path: Path) -> None:
     assert analysis.has_requirements_txt is True
     assert analysis.has_pyproject_toml is False
     assert analysis.detected_ecosystems == ["python"]
+    assert analysis.python_requirements == ["numpy"]
 
 
 def test_analyze_ros_cmake_repo(tmp_path: Path) -> None:
@@ -41,3 +43,28 @@ def test_is_git_url() -> None:
 def test_repo_name_from_url() -> None:
     assert repo_name_from_url("https://github.com/hrehmaan/simfix.git") == "simfix"
     assert repo_name_from_url("https://github.com/hrehmaan/simfix") == "simfix"
+
+
+def test_parse_requirements_file(tmp_path: Path) -> None:
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text(
+        """
+# Core dependencies
+numpy>=1.26
+matplotlib==3.8.0
+
+-r extra-requirements.txt
+-e .
+--index-url https://example.com/simple
+scipy  # numerical package
+""",
+        encoding="utf-8",
+    )
+
+    dependencies = parse_requirements_file(requirements)
+
+    assert dependencies == [
+        "numpy>=1.26",
+        "matplotlib==3.8.0",
+        "scipy",
+    ]
