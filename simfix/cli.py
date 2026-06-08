@@ -8,6 +8,7 @@ from rich.table import Table
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.repo import clone_repo, is_git_url
 
 app = typer.Typer(
     name="simfix",
@@ -18,9 +19,15 @@ console = Console()
 
 
 @app.command()
-def doctor(repo_path: str) -> None:
-    """Analyze a local simulator repository and report possible dependency issues."""
-    analysis = analyze_repo(Path(repo_path))
+def doctor(repo: str) -> None:
+    """Analyze a local path or Git repository URL."""
+    if is_git_url(repo):
+        console.print("[bold blue]Cloning repository...[/bold blue]")
+        repo_path = clone_repo(repo)
+    else:
+        repo_path = Path(repo)
+
+    analysis = analyze_repo(repo_path)
 
     console.print("[bold green]SimFix Doctor[/bold green]")
     console.print(f"Repository: {analysis.repo_path}")
