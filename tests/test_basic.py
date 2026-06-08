@@ -2,6 +2,7 @@ from pathlib import Path
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
 
@@ -68,3 +69,10 @@ scipy  # numerical package
         "matplotlib==3.8.0",
         "scipy",
     ]
+
+
+def test_normalize_requirement_name() -> None:
+    assert normalize_requirement_name("numpy>=1.26") == "numpy"
+    assert normalize_requirement_name("matplotlib==3.8.0") == "matplotlib"
+    assert normalize_requirement_name("scipy") == "scipy"
+    assert normalize_requirement_name("pandas!=2.0") == "pandas"
