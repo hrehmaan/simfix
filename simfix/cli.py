@@ -8,6 +8,7 @@ from rich.table import Table
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
 
 app = typer.Typer(
@@ -56,6 +57,21 @@ def doctor(repo: str) -> None:
             deps_table.add_row(dependency)
 
         console.print(deps_table)
+
+        pypi_results = check_pypi_packages(analysis.python_requirements)
+
+        pypi_table = Table(title="PyPI check")
+        pypi_table.add_column("Package", style="cyan")
+        pypi_table.add_column("Status", style="green")
+        pypi_table.add_column("Latest version", style="yellow")
+
+        for package in pypi_results:
+            status = "found" if package.exists else "not found"
+            latest_version = package.latest_version or "-"
+
+            pypi_table.add_row(package.name, status, latest_version)
+
+        console.print(pypi_table)
 
     if "docker" in analysis.detected_ecosystems:
         console.print(
