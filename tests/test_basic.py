@@ -2,6 +2,7 @@ from pathlib import Path
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
@@ -76,3 +77,23 @@ def test_normalize_requirement_name() -> None:
     assert normalize_requirement_name("matplotlib==3.8.0") == "matplotlib"
     assert normalize_requirement_name("scipy") == "scipy"
     assert normalize_requirement_name("pandas!=2.0") == "pandas"
+
+
+def test_create_python_install_plan(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    plan = create_install_plan(analysis)
+
+    assert plan.recommended_mode == "python"
+    assert "Python" in plan.reason
+
+
+def test_create_docker_install_plan(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text("FROM python:3.12\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    plan = create_install_plan(analysis)
+
+    assert plan.recommended_mode == "docker"
+    assert "Dockerfile" in plan.reason
