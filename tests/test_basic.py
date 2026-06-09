@@ -10,6 +10,7 @@ from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.dockerfile import parse_dockerfile
 from simfix.fixer import fix_requirements_with_uv
+from simfix.git_assets import fix_git_assets
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.pyproject import parse_pyproject
@@ -843,3 +844,58 @@ def test_create_cuda_dockerfile(tmp_path: Path, monkeypatch) -> None:
     dockerfile_text = result.file_path.read_text(encoding="utf-8")
     assert "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04" in dockerfile_text
     assert "python3 -m pip install -r /workspace/requirements.txt" in dockerfile_text
+
+
+def test_fix_git_assets_returns_none_for_non_git_repo(tmp_path: Path) -> None:
+    result = fix_git_assets(tmp_path)
+
+    assert result is None
+
+
+def test_fix_git_assets_reports_missing_git_lfs(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".gitattributes").write_text(
+        "*.bin filter=lfs diff=lfs merge=lfs -text\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "simfix.git_assets._command_exists", lambda command: command == "git"
+    )
+    monkeypatch.setattr("simfix.git_assets._is_git_repo", lambda path: True)
+
+    result = fix_git_assets(tmp_path)
+
+    assert result is not None
+    assert result.changed is False
+    assert "Git LFS files detected" in result.message
+
+
+def test_fix_git_assets_updates_submodules(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".gitmodules").write_text(
+        """
+[submodule "external/test"]
+    path = external/test
+    url = https://example.com/test.git
+""",
+        encoding="utf-8",
+    )
+
+    class FakeResult:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    monkeypatch.setattr("simfix.git_assets._command_exists", lambda command: True)
+    monkeypatch.setattr("simfix.git_assets._is_git_repo", lambda path: True)
+    monkeypatch.setattr(
+        "simfix.git_assets._run_command",
+        lambda command, cwd: FakeResult(),
+    )
+
+    result = fix_git_assets(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+    assert "Git submodules updated successfully" in result.message
