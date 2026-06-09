@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from simfix.system_capabilities import SystemCapabilities
+from simfix.cuda import CudaVersionInfo, is_cuda_version_mismatch
 import sys
 
 
@@ -21,6 +22,7 @@ def generate_recommendations(
     detected_ecosystems: list[str],
     python_version: tuple[int, int] | None = None,
     system_capabilities: SystemCapabilities | None = None,
+    cuda_version_info: CudaVersionInfo | None = None,
 ) -> list[Recommendation]:
     """Generate safe system and vendor dependency recommendations.
 
@@ -157,6 +159,51 @@ def generate_recommendations(
                         "GPU containers may fail with '--gpus all'. Use a compatible "
                         "Linux/NVIDIA environment with NVIDIA Container Toolkit configured, "
                         "or use an HPC/cloud GPU environment."
+                    ),
+                )
+            )
+
+    if cuda_version_info is not None:
+        repo_cuda_version = cuda_version_info.repo_cuda_version
+        system_cuda_version = cuda_version_info.system_cuda_version
+
+        if repo_cuda_version is not None and system_cuda_version is None:
+            recommendations.append(
+                Recommendation(
+                    category="CUDA compatibility",
+                    title="System CUDA support not detected",
+                    status="Compatibility unknown",
+                    reason=(
+                        "The repository appears to require CUDA "
+                        f"{repo_cuda_version[0]}.{repo_cuda_version[1]} from "
+                        f"{cuda_version_info.repo_cuda_source}, but system CUDA support "
+                        "could not be detected with nvidia-smi."
+                    ),
+                    suggestion=(
+                        "Use a compatible Linux/NVIDIA GPU environment, a configured "
+                        "GPU Docker setup, an HPC GPU node, or a cloud GPU instance. "
+                        "If the simulator supports CPU-only mode, that may also be used "
+                        "for limited testing."
+                    ),
+                )
+            )
+
+        if is_cuda_version_mismatch(repo_cuda_version, system_cuda_version):
+            recommendations.append(
+                Recommendation(
+                    category="CUDA compatibility",
+                    title="CUDA version mismatch detected",
+                    status="Version mismatch",
+                    reason=(
+                        "The repository appears to require CUDA "
+                        f"{repo_cuda_version[0]}.{repo_cuda_version[1]} from "
+                        f"{cuda_version_info.repo_cuda_source}, but the NVIDIA driver "
+                        f"reports CUDA {system_cuda_version[0]}.{system_cuda_version[1]} support."
+                    ),
+                    suggestion=(
+                        "Use a CUDA version compatible with the installed NVIDIA driver, "
+                        "update the NVIDIA driver if appropriate, or run the simulator on "
+                        "an HPC/cloud GPU environment with compatible CUDA support."
                     ),
                 )
             )
