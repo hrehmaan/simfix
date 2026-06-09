@@ -10,7 +10,7 @@ from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
-from simfix.fixer import fix_requirements_with_uv
+from simfix.fixer import fix_pyproject_with_uv, fix_requirements_with_uv
 from simfix.git_assets import fix_git_assets
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
@@ -956,3 +956,57 @@ def test_create_docker_run_helper_does_not_overwrite_existing_script(
     assert result is not None
     assert result.changed is False
     assert result.file_path.read_text(encoding="utf-8") == "# existing script\n"
+
+
+def test_fix_pyproject_with_uv_returns_none_without_pyproject(
+    tmp_path: Path,
+) -> None:
+    result = fix_pyproject_with_uv(tmp_path)
+
+    assert result is None
+
+
+def test_fix_pyproject_with_uv_skips_when_requirements_exists(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "example"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+]
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    result = fix_pyproject_with_uv(tmp_path)
+
+    assert result is None
+
+
+def test_fix_pyproject_with_uv_reports_missing_uv(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "example"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+]
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr("simfix.fixer._command_exists", lambda command: False)
+
+    result = fix_pyproject_with_uv(tmp_path)
+
+    assert result is not None
+    assert result.changed is False
+    assert "uv was not found" in result.message
