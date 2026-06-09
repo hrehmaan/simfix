@@ -9,6 +9,7 @@ from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
+from simfix.ros_package import parse_ros_package
 from simfix.system import SystemInfo, command_exists, get_system_info
 
 
@@ -251,3 +252,59 @@ RUN pip install numpy
     assert analysis.dockerfile_info is not None
     assert analysis.dockerfile_info.base_images == ["python:3.12"]
     assert analysis.dockerfile_info.pip_packages == ["numpy"]
+
+
+def test_parse_ros_package(tmp_path: Path) -> None:
+    package_xml = tmp_path / "package.xml"
+    package_xml.write_text(
+        """
+<package format="2">
+  <name>tiny_robot_sim</name>
+  <version>0.1.0</version>
+  <description>Tiny ROS simulator test package.</description>
+  <maintainer email="test@example.com">Test User</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>gazebo_ros</build_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <test_depend>rostest</test_depend>
+</package>
+""",
+        encoding="utf-8",
+    )
+
+    info = parse_ros_package(package_xml)
+
+    assert info is not None
+    assert info.name == "tiny_robot_sim"
+    assert info.build_tool_dependencies == ["catkin"]
+    assert info.build_dependencies == ["roscpp", "gazebo_ros"]
+    assert info.execution_dependencies == ["rospy", "std_msgs"]
+    assert info.test_dependencies == ["rostest"]
+    assert "gazebo_ros" in info.all_dependencies
+
+
+def test_analyze_ros_package_repo(tmp_path: Path) -> None:
+    (tmp_path / "package.xml").write_text(
+        """
+<package format="2">
+  <name>tiny_robot_sim</name>
+  <version>0.1.0</version>
+  <description>Tiny ROS simulator test package.</description>
+  <maintainer email="test@example.com">Test User</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+</package>
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.has_package_xml is True
+    assert "ros" in analysis.detected_ecosystems
+    assert analysis.ros_package_info is not None
+    assert analysis.ros_package_info.name == "tiny_robot_sim"
