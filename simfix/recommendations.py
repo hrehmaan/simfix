@@ -1,21 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+# from dataclasses import dataclass
 from simfix.system_capabilities import SystemCapabilities
 from simfix.cuda import CudaVersionInfo, is_cuda_version_mismatch
 from simfix.ros_environment import RosEnvironmentInfo
+from simfix.vendor_dependencies import detect_vendor_dependency_recommendations
+from simfix.recommendation_types import Recommendation
 import sys
-
-
-@dataclass(frozen=True)
-class Recommendation:
-    """A safe recommendation for a system or vendor dependency."""
-
-    category: str
-    title: str
-    status: str
-    reason: str
-    suggestion: str
 
 
 def generate_recommendations(
@@ -53,6 +44,10 @@ def generate_recommendations(
 
     has_old_pinned_dependency = any(
         _has_old_pinned_dependency(dependency) for dependency in normalized_dependencies
+    )
+
+    recommendations.extend(
+        detect_vendor_dependency_recommendations(normalized_dependencies)
     )
 
     if has_isaacgym:

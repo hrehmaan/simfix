@@ -11,6 +11,8 @@ from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
 from simfix.recommendations import generate_recommendations
+
+from simfix.vendor_dependencies import detect_vendor_dependency_recommendations
 from simfix.system_capabilities import SystemCapabilities
 from simfix.fixer import (
     extract_direct_pin_conflict,
@@ -1419,3 +1421,33 @@ def test_recommendations_include_ros_environment_info() -> None:
     titles = [recommendation.title for recommendation in recommendations]
 
     assert "ROS 1 / catkin environment detected" in titles
+
+
+def test_vendor_dependency_recommendations_detect_isaacgym() -> None:
+    recommendations = detect_vendor_dependency_recommendations(["isaacgym"])
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "NVIDIA Isaac Gym required" in titles
+
+
+def test_vendor_dependency_recommendations_detect_mujoco_py() -> None:
+    recommendations = detect_vendor_dependency_recommendations(["mujoco-py"])
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "MuJoCo system dependencies may be required" in titles
+
+
+def test_vendor_dependency_recommendations_detect_gpu_runtime() -> None:
+    recommendations = detect_vendor_dependency_recommendations(["onnxruntime-gpu"])
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "CUDA runtime compatibility check recommended" in titles
+
+
+def test_vendor_dependency_recommendations_ignore_normal_python_packages() -> None:
+    recommendations = detect_vendor_dependency_recommendations(["numpy", "matplotlib"])
+
+    assert recommendations == []
