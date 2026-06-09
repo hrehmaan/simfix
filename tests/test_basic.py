@@ -28,6 +28,11 @@ from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.ros_docker import create_ros_dockerfile
 from simfix.ros_package import parse_ros_package
 from simfix.setup_py import parse_setup_py_dependencies
+
+from typer.testing import CliRunner
+
+from simfix.cli import app
+
 from simfix.system import (
     SystemInfo,
     command_exists,
@@ -1162,3 +1167,27 @@ def test_generate_recommendations_empty_for_simple_python_project() -> None:
     )
 
     assert recommendations == []
+
+
+def test_recommendations_command_simple_repo(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["recommendations", str(repo)])
+
+    assert result.exit_code == 0
+    assert "SimFix Recommendations" in result.output
+
+
+def test_recommendations_command_detects_isaacgym(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text("isaacgym\n", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["recommendations", str(repo)])
+
+    assert result.exit_code == 0
+    assert "isaacgym" in result.output.lower()

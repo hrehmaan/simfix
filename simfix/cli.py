@@ -16,7 +16,7 @@ from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
 from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.system import get_system_info
-
+from simfix.recommendations import generate_recommendations
 
 console = Console()
 
@@ -58,6 +58,33 @@ def _resolve_repo_path(repo: str) -> Path:
     return Path(repo)
 
 
+def print_recommendations_table(recommendations: list) -> None:
+    """Print system and vendor dependency recommendations."""
+    if not recommendations:
+        console.print(
+            "[green]No additional system or vendor recommendations found.[/green]"
+        )
+        return
+
+    table = Table(title="System and vendor recommendations")
+    table.add_column("Category")
+    table.add_column("Status")
+    table.add_column("Title")
+    table.add_column("Reason")
+    table.add_column("Suggestion")
+
+    for recommendation in recommendations:
+        table.add_row(
+            recommendation.category,
+            recommendation.status,
+            recommendation.title,
+            recommendation.reason,
+            recommendation.suggestion,
+        )
+
+    console.print(table)
+
+
 @app.command()
 def analyze(repo: str) -> None:
     """Analyze repository dependency files without system diagnostics."""
@@ -82,6 +109,23 @@ def analyze(repo: str) -> None:
 
     ecosystems = ", ".join(analysis.detected_ecosystems)
     console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
+
+
+@app.command()
+def recommendations(repo: str) -> None:
+    """Show system, hardware, and vendor dependency recommendations."""
+    repo_path = Path(repo).expanduser().resolve()
+    analysis = analyze_repo(repo_path)
+
+    repo_recommendations = generate_recommendations(
+        dependencies=analysis.all_python_dependencies,
+        detected_ecosystems=analysis.detected_ecosystems,
+    )
+
+    console.print("[bold]SimFix Recommendations[/bold]")
+    console.print(f"Repository: {repo_path}")
+
+    print_recommendations_table(repo_recommendations)
 
 
 @app.command()
