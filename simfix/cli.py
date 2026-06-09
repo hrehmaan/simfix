@@ -214,6 +214,7 @@ def doctor(
     console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
 
     python_dependencies = analysis.all_python_dependencies
+    pypi_results = []
 
     if python_dependencies:
         deps_table = Table(title="Python packages")
@@ -224,6 +225,15 @@ def doctor(
 
         console.print(deps_table)
 
+    pypi_table = Table(title="PyPI check")
+    pypi_table.add_column("Package", style="cyan")
+    pypi_table.add_column("Status")
+
+    for result in pypi_results:
+        status = "found" if result.exists else "not found"
+        pypi_table.add_row(result.name, status)
+
+        console.print(pypi_table)
         pypi_results = check_pypi_packages(python_dependencies)
 
         pypi_table = Table(title="PyPI check")

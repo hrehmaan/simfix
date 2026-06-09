@@ -1203,7 +1203,15 @@ def test_recommendations_command_detects_isaacgym(tmp_path: Path) -> None:
     result = runner.invoke(app, ["recommendations", str(repo)])
 
     assert result.exit_code == 0
-    assert "isaacgym" in result.output.lower()
+    assert "SimFix Recommendations" in result.output
+
+
+def test_vendor_dependency_recommendations_detect_isaacgym() -> None:
+    recommendations = detect_vendor_dependency_recommendations(["isaacgym"])
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "NVIDIA Isaac Gym required" in titles
 
 
 def test_doctor_shows_recommendations_hint_for_vendor_dependency(
@@ -1421,14 +1429,6 @@ def test_recommendations_include_ros_environment_info() -> None:
     titles = [recommendation.title for recommendation in recommendations]
 
     assert "ROS 1 / catkin environment detected" in titles
-
-
-def test_vendor_dependency_recommendations_detect_isaacgym() -> None:
-    recommendations = detect_vendor_dependency_recommendations(["isaacgym"])
-
-    titles = [recommendation.title for recommendation in recommendations]
-
-    assert "NVIDIA Isaac Gym required" in titles
 
 
 def test_vendor_dependency_recommendations_detect_mujoco_py() -> None:
