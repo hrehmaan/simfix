@@ -12,6 +12,7 @@ from simfix.compatibility import generate_compatibility_warnings
 from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
+from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.system import get_system_info
 
 app = typer.Typer(
@@ -23,7 +24,14 @@ console = Console()
 
 
 @app.command()
-def doctor(repo: str) -> None:
+def doctor(
+    repo: str,
+    report: bool = typer.Option(
+        False,
+        "--report",
+        help="Write a Markdown SimFix report to simfix_report.md.",
+    ),
+) -> None:
     """Analyze a local path or Git repository URL."""
     if is_git_url(repo):
         console.print("[bold blue]Cloning repository...[/bold blue]")
@@ -200,6 +208,15 @@ def doctor(repo: str) -> None:
             warning_table.add_row(warning)
 
         console.print(warning_table)
+
+    if report:
+        report_text = generate_markdown_report(
+            analysis=analysis,
+            install_plan=install_plan,
+            system_info=system_info,
+        )
+        report_path = write_markdown_report(report_text)
+        console.print(f"[bold green]Report written to:[/bold green] {report_path}")
 
 
 @app.command()

@@ -64,6 +64,10 @@ Analyze a local repository:
 ```bash
 simfix doctor ../simfix_test
 ```
+To get the report
+```bash
+simfix doctor ../simfix_test --report
+```
 
 Analyze a GitHub repository:
 

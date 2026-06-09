@@ -10,6 +10,7 @@ from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
+from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.ros_package import parse_ros_package
 from simfix.system import SystemInfo, command_exists, get_system_info
 
@@ -350,3 +351,39 @@ find_package(OpenGL REQUIRED)
     assert analysis.cmake_info is not None
     assert analysis.cmake_info.project_name == "tiny_simulator"
     assert analysis.cmake_info.found_packages == ["OpenGL"]
+
+
+def test_generate_markdown_report(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    install_plan = create_install_plan(analysis)
+    system_info = SystemInfo(
+        os_name="Linux",
+        os_version="test",
+        architecture="x86_64",
+        python_version="3.12",
+        git_available=True,
+        docker_available=False,
+        nvidia_gpu_available=False,
+    )
+
+    report = generate_markdown_report(
+        analysis=analysis,
+        install_plan=install_plan,
+        system_info=system_info,
+    )
+
+    assert "# SimFix Report" in report
+    assert "requirements.txt" in report
+    assert "numpy" in report
+    assert "Recommended mode" in report
+
+
+def test_write_markdown_report(tmp_path: Path) -> None:
+    output_path = tmp_path / "simfix_report.md"
+
+    written_path = write_markdown_report("hello\n", output_path)
+
+    assert written_path == output_path.resolve()
+    assert output_path.read_text(encoding="utf-8") == "hello\n"
