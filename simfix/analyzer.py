@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from simfix.conda_environment import CondaEnvironment, parse_conda_environment
+from simfix.dockerfile import DockerfileInfo, parse_dockerfile
 from simfix.python_requirements import parse_requirements_file
 
 
@@ -20,6 +21,7 @@ class RepoAnalysis:
     has_cmake: bool
     python_requirements: list[str]
     conda_environment: CondaEnvironment | None
+    dockerfile_info: DockerfileInfo | None
 
     @property
     def detected_ecosystems(self) -> list[str]:
@@ -62,15 +64,18 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
     if not environment_path.exists():
         environment_path = path / "environment.yaml"
 
+    dockerfile_path = path / "Dockerfile"
+
     return RepoAnalysis(
         repo_path=path,
         has_requirements_txt=requirements_path.exists(),
         has_pyproject_toml=(path / "pyproject.toml").exists(),
         has_environment_yml=(path / "environment.yml").exists()
         or (path / "environment.yaml").exists(),
-        has_dockerfile=(path / "Dockerfile").exists(),
         has_package_xml=(path / "package.xml").exists(),
         has_cmake=(path / "CMakeLists.txt").exists(),
         python_requirements=parse_requirements_file(requirements_path),
         conda_environment=parse_conda_environment(environment_path),
+        has_dockerfile=dockerfile_path.exists(),
+        dockerfile_info=parse_dockerfile(dockerfile_path),
     )

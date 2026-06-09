@@ -96,6 +96,28 @@ def doctor(repo: str) -> None:
 
         console.print(conda_table)
 
+    if analysis.dockerfile_info is not None:
+        docker_info = analysis.dockerfile_info
+
+        docker_table = Table(title="Dockerfile info")
+        docker_table.add_column("Field", style="cyan")
+        docker_table.add_column("Value", style="green")
+
+        docker_table.add_row(
+            "Base image",
+            "\n".join(docker_info.base_images) or "-",
+        )
+        docker_table.add_row(
+            "Apt packages",
+            "\n".join(docker_info.apt_packages) or "-",
+        )
+        docker_table.add_row(
+            "Pip packages",
+            "\n".join(docker_info.pip_packages) or "-",
+        )
+
+        console.print(docker_table)
+
     install_plan = create_install_plan(analysis)
 
     plan_table = Table(title="Install plan")
