@@ -72,7 +72,22 @@ To get the report
 ```bash
 simfix doctor ../simfix_test --report
 ```
+Generate an installation plan:
 
+```bash
+simfix plan ../simfix_test
+```
+
+The usage section should now show:
+
+```text
+simfix system
+simfix analyze <repo>
+simfix plan <repo>
+simfix doctor <repo>
+simfix doctor <repo> --report
+simfix version
+```
 Analyze a GitHub repository:
 
 ```bash
