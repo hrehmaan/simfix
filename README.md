@@ -68,6 +68,15 @@ Analyze a GitHub repository directly:
 simfix doctor https://github.com/user/repository.git
 ```
 
+## Environment recommendations
+
+Some simulator projects require system-level or vendor-managed dependencies such as NVIDIA drivers, CUDA, ROS, Gazebo, Isaac Gym, or Isaac Sim. SimFix does not install these automatically because they depend on the operating system, hardware, driver compatibility, administrator permissions, and vendor installation steps.
+
+Use:
+
+```bash
+simfix recommendations <repo>
+```
 ## Main commands
 
 ```bash
@@ -75,10 +84,11 @@ simfix --version
 simfix system
 simfix doctor <repo>
 simfix doctor <repo> --report
+simfix recommendations <repo>
+simfix fix <repo>
 simfix analyze <repo>
 simfix plan <repo>
 simfix commands <repo>
-simfix fix <repo>
 ```
 
 ## What SimFix can detect

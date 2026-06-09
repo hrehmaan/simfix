@@ -44,9 +44,9 @@ def generate_recommendations(
     if has_isaacgym:
         recommendations.append(
             Recommendation(
-                category="Vendor dependency",
+                category="Vendor-managed dependency",
                 title="NVIDIA Isaac Gym required",
-                status="manual install required",
+                status="Manual installation required",
                 reason=(
                     "The dependency 'isaacgym' was detected, but it is not "
                     "available as a normal PyPI package."
@@ -62,9 +62,9 @@ def generate_recommendations(
     if has_isaacsim:
         recommendations.append(
             Recommendation(
-                category="Vendor dependency",
+                category="Vendor-managed dependency",
                 title="NVIDIA Isaac Sim required",
-                status="manual install required",
+                status="Manual installation required",
                 reason=(
                     "Isaac Sim or omni.isaac dependencies were detected. "
                     "These are NVIDIA-managed dependencies."
@@ -82,7 +82,7 @@ def generate_recommendations(
             Recommendation(
                 category="GPU/CUDA",
                 title="CUDA-compatible environment recommended",
-                status="check required",
+                status="Check required",
                 reason=(
                     "GPU/CUDA-related dependencies were detected in the " "repository."
                 ),
@@ -100,7 +100,7 @@ def generate_recommendations(
             Recommendation(
                 category="ROS",
                 title="ROS environment required",
-                status="manual install required",
+                status="Manual installation required",
                 reason="ROS package files were detected in the repository.",
                 suggestion=(
                     "Use a matching ROS Docker image or install the correct "
