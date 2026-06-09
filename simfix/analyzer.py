@@ -10,6 +10,7 @@ from simfix.pypi import normalize_requirement_name
 from simfix.pyproject import PyProjectInfo, parse_pyproject
 from simfix.python_requirements import parse_requirements_file
 from simfix.ros_package import ROSPackageInfo, parse_ros_package
+from simfix.dependency_discovery import discover_dependency_files
 from simfix.setup_py import parse_setup_py_dependencies
 
 
@@ -89,33 +90,60 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
     if not path.is_dir():
         raise NotADirectoryError(f"Repository path is not a directory: {path}")
 
-    requirements_path = path / "requirements.txt"
-    environment_path = path / "environment.yml"
-    if not environment_path.exists():
-        environment_path = path / "environment.yaml"
+    discovered_files = discover_dependency_files(path)
 
-    dockerfile_path = path / "Dockerfile"
-    package_xml_path = path / "package.xml"
-    cmake_path = path / "CMakeLists.txt"
-    pyproject_path = path / "pyproject.toml"
-    setup_py_path = path / "setup.py"
+    requirements_path = (
+        discovered_files.requirements_txt[0]
+        if discovered_files.requirements_txt
+        else path / "requirements.txt"
+    )
+    environment_path = (
+        discovered_files.environment_files[0]
+        if discovered_files.environment_files
+        else path / "environment.yml"
+    )
+    dockerfile_path = (
+        discovered_files.dockerfiles[0]
+        if discovered_files.dockerfiles
+        else path / "Dockerfile"
+    )
+    package_xml_path = (
+        discovered_files.package_xml_files[0]
+        if discovered_files.package_xml_files
+        else path / "package.xml"
+    )
+    cmake_path = (
+        discovered_files.cmake_lists_files[0]
+        if discovered_files.cmake_lists_files
+        else path / "CMakeLists.txt"
+    )
+    pyproject_path = (
+        discovered_files.pyproject_toml[0]
+        if discovered_files.pyproject_toml
+        else path / "pyproject.toml"
+    )
+    setup_py_path = (
+        discovered_files.setup_py_files[0]
+        if discovered_files.setup_py_files
+        else path / "setup.py"
+    )
+
     setup_py_dependencies = parse_setup_py_dependencies(setup_py_path)
 
     return RepoAnalysis(
         repo_path=path,
-        has_requirements_txt=requirements_path.exists(),
-        has_environment_yml=(path / "environment.yml").exists()
-        or (path / "environment.yaml").exists(),
+        has_requirements_txt=discovered_files.has_requirements_txt,
+        has_environment_yml=discovered_files.has_environment_file,
         python_requirements=parse_requirements_file(requirements_path),
         conda_environment=parse_conda_environment(environment_path),
-        has_dockerfile=dockerfile_path.exists(),
+        has_dockerfile=discovered_files.has_dockerfile,
         dockerfile_info=parse_dockerfile(dockerfile_path),
-        has_package_xml=package_xml_path.exists(),
+        has_package_xml=discovered_files.has_ros_package,
         ros_package_info=parse_ros_package(package_xml_path),
-        has_cmake=cmake_path.exists(),
+        has_cmake=discovered_files.has_cmake_lists,
         cmake_info=parse_cmake_file(cmake_path),
-        has_pyproject_toml=pyproject_path.exists(),
+        has_pyproject_toml=discovered_files.has_pyproject_toml,
         pyproject_info=parse_pyproject(pyproject_path),
-        has_setup_py=setup_py_path.exists(),
+        has_setup_py=discovered_files.has_setup_py,
         setup_py_dependencies=setup_py_dependencies,
     )
