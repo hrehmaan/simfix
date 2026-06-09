@@ -8,6 +8,7 @@ from pathlib import Path
 
 from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile
+from simfix.docker_runner import create_docker_run_helper
 from simfix.git_assets import fix_git_assets
 from simfix.ros_docker import create_ros_dockerfile
 
@@ -129,6 +130,13 @@ def fix_repo(repo_path: str | Path) -> CombinedFixResult:
 
         if ros_result.changed:
             changed_files.append(ros_result.file_path)
+
+    docker_run_result = create_docker_run_helper(repo_path)
+    if docker_run_result is not None:
+        messages.append(docker_run_result.message)
+
+        if docker_run_result.changed:
+            changed_files.append(docker_run_result.file_path)
 
     git_assets_result = fix_git_assets(repo_path)
     if git_assets_result is not None:
