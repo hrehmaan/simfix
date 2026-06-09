@@ -66,7 +66,7 @@ def print_recommendations_table(recommendations: list) -> None:
         )
         return
 
-    table = Table(title="System and vendor recommendations")
+    table = Table(title="Environment compatibility recommendations")
     table.add_column("Category")
     table.add_column("Status")
     table.add_column("Title")
@@ -113,7 +113,7 @@ def analyze(repo: str) -> None:
 
 @app.command()
 def recommendations(repo: str) -> None:
-    """Show system, hardware, and vendor dependency recommendations."""
+    """Show environment compatibility and manual dependency guidance."""
     repo_path = Path(repo).expanduser().resolve()
     analysis = analyze_repo(repo_path)
 
@@ -401,6 +401,18 @@ def doctor(
             warning_table.add_row(warning)
 
         console.print(warning_table)
+
+    repo_recommendations = generate_recommendations(
+        dependencies=analysis.all_python_dependencies,
+        detected_ecosystems=analysis.detected_ecosystems,
+    )
+
+    if repo_recommendations:
+        console.print()
+        console.print(
+            "[yellow]System/vendor recommendations found.[/yellow] "
+            f"Run: simfix recommendations {repo_path}"
+        )
 
     if report:
         report_text = generate_markdown_report(

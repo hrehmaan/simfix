@@ -1191,3 +1191,32 @@ def test_recommendations_command_detects_isaacgym(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "isaacgym" in result.output.lower()
+
+
+def test_doctor_shows_recommendations_hint_for_vendor_dependency(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text("isaacgym\n", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["doctor", str(repo)])
+
+    assert result.exit_code == 0
+    assert "System/vendor recommendations found" in result.output
+    assert "simfix recommendations" in result.output
+
+
+def test_doctor_does_not_show_recommendations_hint_for_simple_repo(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["doctor", str(repo)])
+
+    assert result.exit_code == 0
+    assert "System/vendor recommendations found" not in result.output
