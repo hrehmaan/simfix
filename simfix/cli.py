@@ -59,6 +59,30 @@ def analyze(repo: str) -> None:
 
 
 @app.command()
+def plan(repo: str) -> None:
+    """Generate a recommended installation plan for a repository."""
+    repo_path = _resolve_repo_path(repo)
+    analysis = analyze_repo(repo_path)
+    install_plan = create_install_plan(analysis)
+
+    console.print("[bold green]SimFix Plan[/bold green]")
+    console.print(f"Repository: {analysis.repo_path}")
+
+    ecosystems = ", ".join(analysis.detected_ecosystems)
+    console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
+
+    plan_table = Table(title="Install plan")
+    plan_table.add_column("Field", style="cyan")
+    plan_table.add_column("Value", style="green")
+
+    plan_table.add_row("Recommended mode", install_plan.recommended_mode)
+    plan_table.add_row("Reason", install_plan.reason)
+    plan_table.add_row("Steps", "\n".join(install_plan.steps))
+
+    console.print(plan_table)
+
+
+@app.command()
 def doctor(
     repo: str,
     report: bool = typer.Option(
