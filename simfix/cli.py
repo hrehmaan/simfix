@@ -10,7 +10,7 @@ from simfix import __version__
 from simfix.analyzer import analyze_repo
 from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
-from simfix.fixer import fix_requirements_with_uv
+from simfix.fixer import fix_repo
 from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
@@ -330,20 +330,27 @@ def doctor(
 
 @app.command()
 def fix(repo: str) -> None:
-    """Fix supported dependency files in place."""
+    """Fix supported dependency/environment files in place."""
     repo_path = _resolve_repo_path(repo)
-    result = fix_requirements_with_uv(repo_path)
+    result = fix_repo(repo_path)
 
     console.print("[bold green]SimFix Fix[/bold green]")
     console.print(f"Repository: {Path(repo_path).resolve()}")
 
-    if result is None:
-        console.print("[yellow]No supported dependency file found to fix yet.[/yellow]")
-        return
+    for message in result.messages:
+        console.print(f"- {message}")
 
-    console.print(f"[bold]Updated file:[/bold] {result.file_path}")
-    console.print(f"[bold]Changed:[/bold] {'yes' if result.changed else 'no'}")
-    console.print(f"[bold]Message:[/bold] {result.message}")
+    if result.changed_files:
+        table = Table(title="Changed files")
+        table.add_column("File", style="cyan")
+
+        for file_path in result.changed_files:
+            table.add_row(str(file_path))
+
+        console.print(table)
+    else:
+        console.print("[yellow]No files changed.[/yellow]")
+
     console.print("[yellow]Review changes with git diff before committing.[/yellow]")
 
 

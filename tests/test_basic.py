@@ -14,6 +14,7 @@ from simfix.pyproject import parse_pyproject
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
 from simfix.report import generate_markdown_report, write_markdown_report
+from simfix.ros_docker import create_ros_dockerfile
 from simfix.ros_package import parse_ros_package
 from simfix.system import (
     SystemInfo,
@@ -644,3 +645,80 @@ def test_fix_requirements_with_uv_reports_missing_uv(
     assert result is not None
     assert result.changed is False
     assert "uv was not found" in result.message
+
+
+def test_create_ros1_dockerfile(tmp_path: Path) -> None:
+    (tmp_path / "package.xml").write_text(
+        """
+<package format="2">
+  <name>test_ros_package</name>
+  <version>0.1.0</version>
+  <description>Test package</description>
+  <maintainer email="test@example.com">Test</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+</package>
+""",
+        encoding="utf-8",
+    )
+
+    result = create_ros_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+    assert result.file_path.name == "Dockerfile"
+
+    dockerfile_text = result.file_path.read_text(encoding="utf-8")
+    assert "osrf/ros:noetic-desktop-full" in dockerfile_text
+    assert "catkin build" in dockerfile_text
+
+
+def test_create_ros2_dockerfile(tmp_path: Path) -> None:
+    (tmp_path / "package.xml").write_text(
+        """
+<package format="3">
+  <name>test_ros2_package</name>
+  <version>0.1.0</version>
+  <description>Test package</description>
+  <maintainer email="test@example.com">Test</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+</package>
+""",
+        encoding="utf-8",
+    )
+
+    result = create_ros_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+    assert result.file_path.name == "Dockerfile"
+
+    dockerfile_text = result.file_path.read_text(encoding="utf-8")
+    assert "osrf/ros:humble-desktop" in dockerfile_text
+    assert "colcon build" in dockerfile_text
+
+
+def test_create_ros_dockerfile_does_not_overwrite_existing_file(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.xml").write_text(
+        """
+<package format="2">
+  <name>test_ros_package</name>
+  <version>0.1.0</version>
+  <description>Test package</description>
+  <maintainer email="test@example.com">Test</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+</package>
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "Dockerfile").write_text("FROM ubuntu:22.04\n", encoding="utf-8")
+
+    result = create_ros_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is False
+    assert result.file_path.read_text(encoding="utf-8") == "FROM ubuntu:22.04\n"
