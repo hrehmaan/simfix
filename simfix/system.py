@@ -4,6 +4,41 @@ import platform
 import shutil
 import subprocess
 from dataclasses import dataclass
+from pathlib import Path
+
+
+def get_linux_os_release() -> tuple[str | None, str | None]:
+    """Return Linux distribution name and version from /etc/os-release."""
+    os_release_path = Path("/etc/os-release")
+
+    if not os_release_path.exists():
+        return None, None
+
+    values: dict[str, str] = {}
+
+    for line in os_release_path.read_text(encoding="utf-8").splitlines():
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", maxsplit=1)
+        values[key] = value.strip().strip('"')
+
+    distro = values.get("NAME")
+    version = values.get("VERSION_ID")
+
+    return distro, version
+
+
+def is_windows_subsystem_for_linux() -> bool:
+    """Return True if running inside Windows Subsystem for Linux."""
+    version_path = Path("/proc/version")
+
+    if not version_path.exists():
+        return False
+
+    text = version_path.read_text(encoding="utf-8").lower()
+
+    return "microsoft" in text or "wsl" in text
 
 
 @dataclass(frozen=True)
@@ -14,6 +49,9 @@ class SystemInfo:
     os_version: str
     architecture: str
     python_version: str
+    linux_distro: str | None
+    linux_version: str | None
+    is_wsl: bool
     git_available: bool
     docker_available: bool
     nvidia_gpu_available: bool
@@ -45,11 +83,15 @@ def has_nvidia_gpu() -> bool:
 
 def get_system_info() -> SystemInfo:
     """Collect basic system information."""
+    linux_distro, linux_version = get_linux_os_release()
     return SystemInfo(
         os_name=platform.system(),
         os_version=platform.release(),
         architecture=platform.machine(),
         python_version=platform.python_version(),
+        linux_distro=linux_distro,
+        linux_version=linux_version,
+        is_wsl=is_windows_subsystem_for_linux(),
         git_available=command_exists("git"),
         docker_available=command_exists("docker"),
         nvidia_gpu_available=has_nvidia_gpu(),
