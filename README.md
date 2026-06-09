@@ -64,6 +64,10 @@ Analyze a local repository:
 ```bash
 simfix doctor ../simfix_test
 ```
+```bash
+simfix analyze ../simfix_test
+```
+
 To get the report
 ```bash
 simfix doctor ../simfix_test --report

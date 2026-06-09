@@ -23,6 +23,41 @@ app = typer.Typer(
 console = Console()
 
 
+def _resolve_repo_path(repo: str) -> Path:
+    """Resolve a local path or clone a Git repository URL."""
+    if is_git_url(repo):
+        console.print("[bold blue]Cloning repository...[/bold blue]")
+        return clone_repo(repo)
+
+    return Path(repo)
+
+
+@app.command()
+def analyze(repo: str) -> None:
+    """Analyze repository dependency files without system diagnostics."""
+    repo_path = _resolve_repo_path(repo)
+    analysis = analyze_repo(repo_path)
+
+    console.print("[bold green]SimFix Analyze[/bold green]")
+    console.print(f"Repository: {analysis.repo_path}")
+
+    table = Table(title="Detected dependency files")
+    table.add_column("File/type", style="cyan")
+    table.add_column("Detected", style="green")
+
+    table.add_row("requirements.txt", "yes" if analysis.has_requirements_txt else "no")
+    table.add_row("pyproject.toml", "yes" if analysis.has_pyproject_toml else "no")
+    table.add_row("environment.yml", "yes" if analysis.has_environment_yml else "no")
+    table.add_row("Dockerfile", "yes" if analysis.has_dockerfile else "no")
+    table.add_row("package.xml / ROS", "yes" if analysis.has_package_xml else "no")
+    table.add_row("CMakeLists.txt", "yes" if analysis.has_cmake else "no")
+
+    console.print(table)
+
+    ecosystems = ", ".join(analysis.detected_ecosystems)
+    console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
+
+
 @app.command()
 def doctor(
     repo: str,
@@ -33,11 +68,7 @@ def doctor(
     ),
 ) -> None:
     """Analyze a local path or Git repository URL."""
-    if is_git_url(repo):
-        console.print("[bold blue]Cloning repository...[/bold blue]")
-        repo_path = clone_repo(repo)
-    else:
-        repo_path = Path(repo)
+    repo_path = _resolve_repo_path(repo)
 
     analysis = analyze_repo(repo_path)
     system_info = get_system_info()
