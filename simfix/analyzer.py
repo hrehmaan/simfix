@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from simfix.conda_environment import CondaEnvironment, parse_conda_environment
 from simfix.python_requirements import parse_requirements_file
 
 
@@ -18,6 +19,7 @@ class RepoAnalysis:
     has_package_xml: bool
     has_cmake: bool
     python_requirements: list[str]
+    conda_environment: CondaEnvironment | None
 
     @property
     def detected_ecosystems(self) -> list[str]:
@@ -56,6 +58,9 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
         raise NotADirectoryError(f"Repository path is not a directory: {path}")
 
     requirements_path = path / "requirements.txt"
+    environment_path = path / "environment.yml"
+    if not environment_path.exists():
+        environment_path = path / "environment.yaml"
 
     return RepoAnalysis(
         repo_path=path,
@@ -67,4 +72,5 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
         has_package_xml=(path / "package.xml").exists(),
         has_cmake=(path / "CMakeLists.txt").exists(),
         python_requirements=parse_requirements_file(requirements_path),
+        conda_environment=parse_conda_environment(environment_path),
     )
