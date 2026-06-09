@@ -8,6 +8,7 @@ from rich.table import Table
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
@@ -80,6 +81,26 @@ def plan(repo: str) -> None:
     plan_table.add_row("Steps", "\n".join(install_plan.steps))
 
     console.print(plan_table)
+
+
+@app.command()
+def commands(repo: str) -> None:
+    """Show suggested installation commands without running them."""
+    repo_path = _resolve_repo_path(repo)
+    analysis = analyze_repo(repo_path)
+    command_plan = create_command_plan(analysis)
+
+    console.print("[bold green]SimFix Commands[/bold green]")
+    console.print(f"Repository: {analysis.repo_path}")
+
+    table = Table(title=command_plan.title)
+    table.add_column("#", style="cyan")
+    table.add_column("Command", style="green")
+
+    for index, command in enumerate(command_plan.commands, start=1):
+        table.add_row(str(index), command)
+
+    console.print(table)
 
 
 @app.command()
