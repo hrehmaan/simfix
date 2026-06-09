@@ -3,6 +3,7 @@ from pathlib import Path
 from simfix import __version__
 from simfix.analyzer import analyze_repo
 from simfix.compatibility import generate_compatibility_warnings
+from simfix.conda_environment import parse_conda_environment
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
@@ -149,3 +150,57 @@ def test_ros_warning_on_macos(tmp_path: Path) -> None:
     warnings = generate_compatibility_warnings(analysis, system_info)
 
     assert any("ROS project detected" in warning for warning in warnings)
+
+
+def test_parse_conda_environment(tmp_path: Path) -> None:
+    environment = tmp_path / "environment.yml"
+    environment.write_text(
+        """
+name: sim-env
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - pip
+  - pip:
+      - typer>=0.12
+      - rich
+""",
+        encoding="utf-8",
+    )
+
+    conda_env = parse_conda_environment(environment)
+
+    assert conda_env is not None
+    assert conda_env.name == "sim-env"
+    assert conda_env.conda_dependencies == [
+        "python=3.10",
+        "numpy",
+        "scipy",
+        "pip",
+    ]
+    assert conda_env.pip_dependencies == [
+        "typer>=0.12",
+        "rich",
+    ]
+
+
+def test_analyze_conda_repo(tmp_path: Path) -> None:
+    (tmp_path / "environment.yml").write_text(
+        """
+name: sim-env
+dependencies:
+  - python=3.10
+  - numpy
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.has_environment_yml is True
+    assert "conda" in analysis.detected_ecosystems
+    assert analysis.conda_environment is not None
+    assert analysis.conda_environment.name == "sim-env"

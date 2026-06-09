@@ -77,6 +77,25 @@ def doctor(repo: str) -> None:
 
         console.print(pypi_table)
 
+    if analysis.conda_environment is not None:
+        conda_env = analysis.conda_environment
+
+        conda_table = Table(title="Conda environment")
+        conda_table.add_column("Field", style="cyan")
+        conda_table.add_column("Value", style="green")
+
+        conda_table.add_row("Name", conda_env.name or "-")
+        conda_table.add_row(
+            "Conda packages",
+            "\n".join(conda_env.conda_dependencies) or "-",
+        )
+        conda_table.add_row(
+            "Pip packages",
+            "\n".join(conda_env.pip_dependencies) or "-",
+        )
+
+        console.print(conda_table)
+
     install_plan = create_install_plan(analysis)
 
     plan_table = Table(title="Install plan")
