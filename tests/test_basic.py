@@ -13,7 +13,13 @@ from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
 from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.ros_package import parse_ros_package
-from simfix.system import SystemInfo, command_exists, get_system_info
+from simfix.system import (
+    SystemInfo,
+    command_exists,
+    get_linux_os_release,
+    get_system_info,
+    is_windows_subsystem_for_linux,
+)
 
 
 def test_version() -> None:
@@ -128,6 +134,9 @@ def test_docker_warning_when_docker_missing(tmp_path: Path) -> None:
         os_version="test",
         architecture="x86_64",
         python_version="3.12",
+        linux_distro="Ubuntu",
+        linux_version="22.04",
+        is_wsl=False,
         git_available=True,
         docker_available=False,
         nvidia_gpu_available=False,
@@ -151,6 +160,9 @@ def test_ros_warning_on_macos(tmp_path: Path) -> None:
         os_version="test",
         architecture="arm64",
         python_version="3.12",
+        linux_distro="Ubuntu",
+        linux_version="22.04",
+        is_wsl=False,
         git_available=True,
         docker_available=True,
         nvidia_gpu_available=False,
@@ -372,6 +384,9 @@ def test_generate_markdown_report(tmp_path: Path) -> None:
         os_version="test",
         architecture="x86_64",
         python_version="3.12",
+        linux_distro="Ubuntu",
+        linux_version="22.04",
+        is_wsl=False,
         git_available=True,
         docker_available=False,
         nvidia_gpu_available=False,
@@ -488,6 +503,9 @@ dependencies:
         os_version="test",
         architecture="x86_64",
         python_version="3.12",
+        linux_distro="Ubuntu",
+        linux_version="22.04",
+        is_wsl=False,
         git_available=True,
         docker_available=True,
         nvidia_gpu_available=False,
@@ -502,3 +520,14 @@ dependencies:
     assert (
         "Conda environment detected, but neither conda nor mamba was found." in warnings
     )
+
+
+def test_get_linux_os_release_returns_tuple() -> None:
+    distro, version = get_linux_os_release()
+
+    assert distro is None or isinstance(distro, str)
+    assert version is None or isinstance(version, str)
+
+
+def test_is_windows_subsystem_for_linux_returns_bool() -> None:
+    assert isinstance(is_windows_subsystem_for_linux(), bool)

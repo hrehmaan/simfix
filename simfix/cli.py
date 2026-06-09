@@ -316,6 +316,9 @@ def system() -> None:
 
     table.add_row("OS", info.os_name)
     table.add_row("OS version", info.os_version)
+    table.add_row("Linux distro", info.linux_distro or "-")
+    table.add_row("Linux version", info.linux_version or "-")
+    table.add_row("WSL", "yes" if info.is_wsl else "no")
     table.add_row("Architecture", info.architecture)
     table.add_row("Python", info.python_version)
     table.add_row("Pip", "found" if info.pip_available else "not found")
