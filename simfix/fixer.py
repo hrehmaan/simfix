@@ -6,6 +6,21 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from simfix.ros_docker import create_ros_dockerfile
+
+
+@dataclass(frozen=True)
+class CombinedFixResult:
+    """Combined result of all fixers."""
+
+    messages: list[str]
+    changed_files: list[Path]
+
+
+def _command_exists(command: str) -> bool:
+    """Return True if a command exists on PATH."""
+    return shutil.which(command) is not None
+
 
 @dataclass(frozen=True)
 class FixResult:
@@ -14,11 +29,6 @@ class FixResult:
     file_path: Path
     changed: bool
     message: str
-
-
-def _command_exists(command: str) -> bool:
-    """Return True if a command exists on PATH."""
-    return shutil.which(command) is not None
 
 
 def fix_requirements_with_uv(repo_path: str | Path) -> FixResult | None:
@@ -77,4 +87,34 @@ def fix_requirements_with_uv(repo_path: str | Path) -> FixResult | None:
         file_path=requirements_path,
         changed=changed,
         message="requirements.txt resolved successfully with uv.",
+    )
+
+
+def fix_repo(repo_path: str | Path) -> CombinedFixResult:
+    """Run all supported fixers for a repository."""
+    messages: list[str] = []
+    changed_files: list[Path] = []
+
+    requirements_result = fix_requirements_with_uv(repo_path)
+
+    if requirements_result is not None:
+        messages.append(requirements_result.message)
+
+        if requirements_result.changed:
+            changed_files.append(requirements_result.file_path)
+
+    ros_result = create_ros_dockerfile(repo_path)
+
+    if ros_result is not None:
+        messages.append(ros_result.message)
+
+        if ros_result.changed:
+            changed_files.append(ros_result.file_path)
+
+    if not messages:
+        messages.append("No supported dependency files found to fix yet.")
+
+    return CombinedFixResult(
+        messages=messages,
+        changed_files=changed_files,
     )
