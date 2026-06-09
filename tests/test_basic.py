@@ -16,7 +16,9 @@ from simfix.ros_package import parse_ros_package
 from simfix.system import (
     SystemInfo,
     command_exists,
+    get_cuda_toolkit_version,
     get_linux_os_release,
+    get_nvidia_smi_field,
     get_system_info,
     is_windows_subsystem_for_linux,
 )
@@ -140,6 +142,9 @@ def test_docker_warning_when_docker_missing(tmp_path: Path) -> None:
         git_available=True,
         docker_available=False,
         nvidia_gpu_available=False,
+        nvidia_driver_version=None,
+        nvidia_cuda_version=None,
+        cuda_toolkit_version=None,
         pip_available=True,
         uv_available=False,
         conda_available=False,
@@ -166,6 +171,9 @@ def test_ros_warning_on_macos(tmp_path: Path) -> None:
         git_available=True,
         docker_available=True,
         nvidia_gpu_available=False,
+        nvidia_driver_version=None,
+        nvidia_cuda_version=None,
+        cuda_toolkit_version=None,
         pip_available=True,
         uv_available=False,
         conda_available=False,
@@ -390,6 +398,9 @@ def test_generate_markdown_report(tmp_path: Path) -> None:
         git_available=True,
         docker_available=False,
         nvidia_gpu_available=False,
+        nvidia_driver_version=None,
+        nvidia_cuda_version=None,
+        cuda_toolkit_version=None,
         pip_available=True,
         uv_available=False,
         conda_available=False,
@@ -509,6 +520,9 @@ dependencies:
         git_available=True,
         docker_available=True,
         nvidia_gpu_available=False,
+        nvidia_driver_version=None,
+        nvidia_cuda_version=None,
+        cuda_toolkit_version=None,
         pip_available=True,
         uv_available=False,
         conda_available=False,
@@ -560,6 +574,9 @@ def test_ros_noetic_ubuntu_mismatch_warning(tmp_path: Path) -> None:
         git_available=True,
         docker_available=True,
         nvidia_gpu_available=False,
+        nvidia_driver_version=None,
+        nvidia_cuda_version=None,
+        cuda_toolkit_version=None,
         pip_available=True,
         uv_available=False,
         conda_available=False,
@@ -569,3 +586,15 @@ def test_ros_noetic_ubuntu_mismatch_warning(tmp_path: Path) -> None:
     warnings = generate_compatibility_warnings(analysis, system_info)
 
     assert any("ROS noetic project detected" in warning for warning in warnings)
+
+
+def test_get_nvidia_smi_field_returns_optional_string() -> None:
+    value = get_nvidia_smi_field("driver_version")
+
+    assert value is None or isinstance(value, str)
+
+
+def test_get_cuda_toolkit_version_returns_optional_string() -> None:
+    value = get_cuda_toolkit_version()
+
+    assert value is None or isinstance(value, str)

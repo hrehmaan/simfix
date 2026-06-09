@@ -332,6 +332,9 @@ def system() -> None:
         "NVIDIA GPU",
         "detected" if info.nvidia_gpu_available else "not detected",
     )
+    table.add_row("NVIDIA driver", info.nvidia_driver_version or "-")
+    table.add_row("NVIDIA CUDA", info.nvidia_cuda_version or "-")
+    table.add_row("CUDA toolkit", info.cuda_toolkit_version or "-")
 
     console.print(table)
 
