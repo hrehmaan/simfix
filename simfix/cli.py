@@ -17,10 +17,34 @@ from simfix.repo import clone_repo, is_git_url
 from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.system import get_system_info
 
+
+console = Console()
+
+
+def version_callback(value: bool) -> None:
+    """Show SimFix version and exit."""
+    if value:
+        typer.echo(f"simfix {__version__}")
+        raise typer.Exit
+
+
 app = typer.Typer(
-    name="simfix",
-    help="Smart dependency checker and installer assistant for simulator repositories.",
+    help="SimFix: dependency checker and installer assistant for simulator repositories.",
 )
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show SimFix version and exit.",
+        callback=version_callback,
+        is_eager=True,
+    ),
+) -> None:
+    """SimFix command-line interface."""
+
 
 console = Console()
 

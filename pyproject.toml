@@ -1,45 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "simfix"
 version = "0.1.0"
-description = "A smart dependency checker and installer assistant for simulator repositories."
+description = "A dependency checker and installation assistant for simulator repositories."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
-  { name = "Habib ur Rehmaan" }
+    { name = "Habib ur Rehmaan", email = "h.rehmaan96@gmail.com" }
 ]
+keywords = [
+    "simulator",
+    "dependencies",
+    "installation",
+    "docker",
+    "cuda",
+    "ros",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
 dependencies = [
-  "typer>=0.12",
-  "rich>=13.0",
-  "requests>=2.31",
-  "pyyaml>=6.0",
-  "uv>=0.5",
-  "tomli>=2.0; python_version < '3.11'",
+    "rich",
+    "typer",
+    "requests",
+    "packaging",
+    "pyyaml",
+    "uv",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.0",
-  "pre-commit>=3.0",
-  "ruff>=0.8",
+    "pytest",
+    "pre-commit",
+    "ruff",
 ]
 
 [project.scripts]
 simfix = "simfix.cli:app"
 
-[tool.ruff]
-line-length = 88
-target-version = "py310"
+[tool.setuptools.packages.find]
+include = ["simfix*"]
+exclude = ["workspace*"]
 
-[tool.ruff.lint]
-select = [
-  "E",
-  "F",
-  "I",
-  "UP",
-  "B",
-]
-ignore = []
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+[project.urls]
+Homepage = "https://github.com/hrehmaan/simfix"
+Repository = "https://github.com/hrehmaan/simfix"
+Issues = "https://github.com/hrehmaan/simfix/issues"
