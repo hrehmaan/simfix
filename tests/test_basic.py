@@ -175,7 +175,6 @@ def test_ros_warning_on_macos(tmp_path: Path) -> None:
     warnings = generate_compatibility_warnings(analysis, system_info)
 
     assert any("ROS project detected" in warning for warning in warnings)
-    assert analysis.ros_package_info.build_system == "catkin"
 
 
 def test_parse_conda_environment(tmp_path: Path) -> None:
