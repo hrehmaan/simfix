@@ -29,6 +29,10 @@ from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.ros_docker import create_ros_dockerfile
 from simfix.ros_package import parse_ros_package
 from simfix.setup_py import parse_setup_py_dependencies
+from simfix.ros_environment import (
+    RosEnvironmentInfo,
+    detect_ros_environment_info,
+)
 from simfix.cuda import (
     CudaVersionInfo,
     _detect_cuda_version_from_text,
@@ -1349,3 +1353,69 @@ def test_recommendations_warn_when_repo_cuda_known_but_system_cuda_unknown() -> 
     titles = [recommendation.title for recommendation in recommendations]
 
     assert "System CUDA support not detected" in titles
+
+
+def test_detect_ros1_catkin_environment(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    (repo / "package.xml").write_text(
+        """
+        <package format="2">
+          <name>test_ros1_package</name>
+          <buildtool_depend>catkin</buildtool_depend>
+          <depend>roscpp</depend>
+        </package>
+        """,
+        encoding="utf-8",
+    )
+
+    info = detect_ros_environment_info(repo)
+
+    assert info is not None
+    assert info.project_type == "ROS 1 / catkin"
+    assert info.recommended_distribution == "Noetic"
+    assert info.recommended_ubuntu == "Ubuntu 20.04"
+    assert info.recommended_docker_image == "osrf/ros:noetic-desktop-full"
+
+
+def test_detect_ros2_ament_environment(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    (repo / "package.xml").write_text(
+        """
+        <package format="3">
+          <name>test_ros2_package</name>
+          <buildtool_depend>ament_cmake</buildtool_depend>
+          <depend>rclcpp</depend>
+        </package>
+        """,
+        encoding="utf-8",
+    )
+
+    info = detect_ros_environment_info(repo)
+
+    assert info is not None
+    assert info.project_type == "ROS 2 / ament"
+    assert info.recommended_distribution == "Humble"
+    assert info.recommended_ubuntu == "Ubuntu 22.04"
+    assert info.recommended_docker_image == "osrf/ros:humble-desktop"
+
+
+def test_recommendations_include_ros_environment_info() -> None:
+    recommendations = generate_recommendations(
+        dependencies=[],
+        detected_ecosystems=["ros"],
+        ros_environment_info=RosEnvironmentInfo(
+            project_type="ROS 1 / catkin",
+            recommended_distribution="Noetic",
+            recommended_ubuntu="Ubuntu 20.04",
+            recommended_docker_image="osrf/ros:noetic-desktop-full",
+            source="package.xml",
+        ),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "ROS 1 / catkin environment detected" in titles

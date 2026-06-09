@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from simfix.system_capabilities import SystemCapabilities
 from simfix.cuda import CudaVersionInfo, is_cuda_version_mismatch
+from simfix.ros_environment import RosEnvironmentInfo
 import sys
 
 
@@ -23,6 +24,7 @@ def generate_recommendations(
     python_version: tuple[int, int] | None = None,
     system_capabilities: SystemCapabilities | None = None,
     cuda_version_info: CudaVersionInfo | None = None,
+    ros_environment_info: RosEnvironmentInfo | None = None,
 ) -> list[Recommendation]:
     """Generate safe system and vendor dependency recommendations.
 
@@ -107,7 +109,43 @@ def generate_recommendations(
             )
         )
 
-    if has_ros:
+    if ros_environment_info is not None:
+        if ros_environment_info.project_type in {"ROS 1 / catkin", "ROS 2 / ament"}:
+            recommendations.append(
+                Recommendation(
+                    category="ROS",
+                    title=f"{ros_environment_info.project_type} environment detected",
+                    status="Environment recommendation available",
+                    reason=(
+                        f"{ros_environment_info.project_type} signals were detected "
+                        f"from {ros_environment_info.source}."
+                    ),
+                    suggestion=(
+                        f"Use ROS {ros_environment_info.recommended_distribution} "
+                        f"with {ros_environment_info.recommended_ubuntu}, or use the "
+                        f"Docker image {ros_environment_info.recommended_docker_image}."
+                    ),
+                )
+            )
+        else:
+            recommendations.append(
+                Recommendation(
+                    category="ROS",
+                    title="ROS project detected",
+                    status="Manual environment check recommended",
+                    reason=(
+                        f"ROS package files were detected from "
+                        f"{ros_environment_info.source}, but the ROS build style "
+                        "could not be confidently classified."
+                    ),
+                    suggestion=(
+                        "Check the package.xml and build files to determine whether "
+                        "the project requires ROS 1/catkin or ROS 2/ament. Use a "
+                        "matching ROS Docker image or native ROS installation."
+                    ),
+                )
+            )
+    elif has_ros:
         recommendations.append(
             Recommendation(
                 category="ROS",
@@ -115,11 +153,8 @@ def generate_recommendations(
                 status="Manual installation required",
                 reason="ROS package files were detected in the repository.",
                 suggestion=(
-                    "Use a matching ROS Docker image or install the correct "
-                    "ROS distribution manually. For ROS 1/catkin projects, "
-                    "ROS Noetic on Ubuntu 20.04 is commonly used. For ROS "
-                    "2/ament projects, ROS Humble on Ubuntu 22.04 is commonly "
-                    "used."
+                    "Use a matching ROS Docker image or install the correct ROS "
+                    "distribution manually."
                 ),
             )
         )
