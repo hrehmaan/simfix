@@ -8,6 +8,7 @@ from pathlib import Path
 
 from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile
+from simfix.git_assets import fix_git_assets
 from simfix.ros_docker import create_ros_dockerfile
 
 
@@ -128,6 +129,10 @@ def fix_repo(repo_path: str | Path) -> CombinedFixResult:
 
         if ros_result.changed:
             changed_files.append(ros_result.file_path)
+
+    git_assets_result = fix_git_assets(repo_path)
+    if git_assets_result is not None:
+        messages.append(git_assets_result.message)
 
     if not messages:
         messages.append("No supported dependency files found to fix yet.")
