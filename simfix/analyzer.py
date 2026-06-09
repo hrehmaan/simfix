@@ -6,9 +6,11 @@ from pathlib import Path
 from simfix.cmake import CMakeInfo, parse_cmake_file
 from simfix.conda_environment import CondaEnvironment, parse_conda_environment
 from simfix.dockerfile import DockerfileInfo, parse_dockerfile
+from simfix.pypi import normalize_requirement_name
 from simfix.pyproject import PyProjectInfo, parse_pyproject
 from simfix.python_requirements import parse_requirements_file
 from simfix.ros_package import ROSPackageInfo, parse_ros_package
+from simfix.setup_py import parse_setup_py_dependencies
 
 
 @dataclass(frozen=True)
@@ -22,6 +24,8 @@ class RepoAnalysis:
     has_dockerfile: bool
     has_package_xml: bool
     has_cmake: bool
+    has_setup_py: bool
+    setup_py_dependencies: list[str]
     python_requirements: list[str]
     conda_environment: CondaEnvironment | None
     dockerfile_info: DockerfileInfo | None
@@ -31,13 +35,23 @@ class RepoAnalysis:
 
     @property
     def all_python_dependencies(self) -> list[str]:
-        """Return Python dependencies from requirements.txt and pyproject.toml."""
+        """Return all Python dependencies from supported dependency files."""
         dependencies = list(self.python_requirements)
 
         if self.pyproject_info is not None:
             dependencies.extend(self.pyproject_info.dependencies)
 
-        return list(dict.fromkeys(dependencies))
+        dependencies.extend(self.setup_py_dependencies)
+
+        unique_dependencies: dict[str, str] = {}
+
+        for dependency in dependencies:
+            package_name = normalize_requirement_name(dependency).lower()
+
+            if package_name not in unique_dependencies:
+                unique_dependencies[package_name] = dependency
+
+        return list(unique_dependencies.values())
 
     @property
     def detected_ecosystems(self) -> list[str]:
@@ -84,6 +98,8 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
     package_xml_path = path / "package.xml"
     cmake_path = path / "CMakeLists.txt"
     pyproject_path = path / "pyproject.toml"
+    setup_py_path = path / "setup.py"
+    setup_py_dependencies = parse_setup_py_dependencies(setup_py_path)
 
     return RepoAnalysis(
         repo_path=path,
@@ -100,4 +116,6 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
         cmake_info=parse_cmake_file(cmake_path),
         has_pyproject_toml=pyproject_path.exists(),
         pyproject_info=parse_pyproject(pyproject_path),
+        has_setup_py=setup_py_path.exists(),
+        setup_py_dependencies=setup_py_dependencies,
     )
