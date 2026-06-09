@@ -58,7 +58,9 @@ def generate_markdown_report(
 
     lines.extend(f"{index}. {step}" for index, step in enumerate(install_plan.steps, 1))
 
-    if analysis.python_requirements:
+    python_dependencies = analysis.all_python_dependencies
+
+    if python_dependencies:
         lines.extend(
             [
                 "",
@@ -66,7 +68,7 @@ def generate_markdown_report(
                 "",
             ]
         )
-        lines.extend(f"- `{dependency}`" for dependency in analysis.python_requirements)
+        lines.extend(f"- `{dependency}`" for dependency in python_dependencies)
 
     if analysis.pyproject_info is not None:
         pyproject_info = analysis.pyproject_info
@@ -81,7 +83,7 @@ def generate_markdown_report(
                 "",
             ]
         )
-        lines.extend(f"- `{dependency}`" for dependency in pyproject_info.dependencies)
+        lines.extend(f"- `{dependency}`" for dependency in python_dependencies)
 
         lines.extend(["", "### Build system requires", ""])
         lines.extend(
