@@ -19,6 +19,7 @@ from simfix.system_capabilities import detect_system_capabilities
 from simfix.system import get_system_info
 from simfix.recommendations import generate_recommendations
 from simfix.cuda import detect_cuda_version_info
+from simfix.ros_environment import detect_ros_environment_info
 
 console = Console()
 
@@ -124,6 +125,7 @@ def recommendations(repo: str) -> None:
         detected_ecosystems=analysis.detected_ecosystems,
         system_capabilities=detect_system_capabilities(),
         cuda_version_info=detect_cuda_version_info(repo_path),
+        ros_environment_info=detect_ros_environment_info(repo_path),
     )
 
     console.print("[bold]SimFix Recommendations[/bold]")
@@ -411,7 +413,9 @@ def doctor(
         detected_ecosystems=analysis.detected_ecosystems,
         system_capabilities=detect_system_capabilities(),
         cuda_version_info=detect_cuda_version_info(repo_path),
+        ros_environment_info=detect_ros_environment_info(repo_path),
     )
+
     if repo_recommendations:
         console.print()
         console.print(
