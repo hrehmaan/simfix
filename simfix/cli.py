@@ -8,6 +8,7 @@ from rich.table import Table
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
 
@@ -72,6 +73,18 @@ def doctor(repo: str) -> None:
             pypi_table.add_row(package.name, status, latest_version)
 
         console.print(pypi_table)
+
+    install_plan = create_install_plan(analysis)
+
+    plan_table = Table(title="Install plan")
+    plan_table.add_column("Field", style="cyan")
+    plan_table.add_column("Value", style="green")
+
+    plan_table.add_row("Recommended mode", install_plan.recommended_mode)
+    plan_table.add_row("Reason", install_plan.reason)
+    plan_table.add_row("Steps", "\n".join(install_plan.steps))
+
+    console.print(plan_table)
 
     if "docker" in analysis.detected_ecosystems:
         console.print(
