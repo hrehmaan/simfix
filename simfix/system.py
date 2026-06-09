@@ -17,6 +17,10 @@ class SystemInfo:
     git_available: bool
     docker_available: bool
     nvidia_gpu_available: bool
+    pip_available: bool
+    uv_available: bool
+    conda_available: bool
+    mamba_available: bool
 
 
 def command_exists(command: str) -> bool:
@@ -49,4 +53,8 @@ def get_system_info() -> SystemInfo:
         git_available=command_exists("git"),
         docker_available=command_exists("docker"),
         nvidia_gpu_available=has_nvidia_gpu(),
+        pip_available=command_exists("pip") or command_exists("pip3"),
+        uv_available=command_exists("uv"),
+        conda_available=command_exists("conda"),
+        mamba_available=command_exists("mamba"),
     )

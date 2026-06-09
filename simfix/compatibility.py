@@ -15,6 +15,22 @@ def generate_compatibility_warnings(
     if "docker" in ecosystems and not system_info.docker_available:
         warnings.append("Dockerfile detected, but Docker was not found on this system.")
 
+    if (
+        "conda" in ecosystems
+        and not system_info.conda_available
+        and not system_info.mamba_available
+    ):
+        warnings.append(
+            "Conda environment detected, but neither conda nor mamba was found."
+        )
+
+    if (
+        "python" in ecosystems
+        and not system_info.pip_available
+        and not system_info.uv_available
+    ):
+        warnings.append("Python project detected, but neither pip nor uv was found.")
+
     if "ros" in ecosystems and system_info.os_name != "Linux":
         warnings.append(
             "ROS project detected, but the current system is not Linux. "
