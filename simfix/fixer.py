@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from simfix.conda_fixer import fix_conda_environment_file
+from simfix.cuda_docker import create_cuda_dockerfile
 from simfix.ros_docker import create_ros_dockerfile
 
 
@@ -111,6 +112,14 @@ def fix_repo(repo_path: str | Path) -> CombinedFixResult:
 
         if conda_result.changed:
             changed_files.append(conda_result.file_path)
+
+    cuda_result = create_cuda_dockerfile(repo_path)
+
+    if cuda_result is not None:
+        messages.append(cuda_result.message)
+
+        if cuda_result.changed:
+            changed_files.append(cuda_result.file_path)
 
     ros_result = create_ros_dockerfile(repo_path)
 

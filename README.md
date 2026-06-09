@@ -30,6 +30,15 @@ SimFix is designed for projects where installation often fails because of missin
   * Docker availability
   * NVIDIA GPU availability
 
+Currently supported by `simfix fix`:
+
+- `requirements.txt` resolution using `uv`
+- `environment.yml` cleanup
+- CUDA/GPU Dockerfile creation
+- ROS `package.xml` Dockerfile creation
+
+For GPU projects, SimFix can create a CUDA Dockerfile. The host machine still needs a working NVIDIA driver and NVIDIA Container Toolkit to run GPU containers.
+
 ## Installation for development
 
 Clone the repository:

@@ -7,6 +7,7 @@ from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
 from simfix.conda_fixer import fix_conda_environment_file
+from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.dockerfile import parse_dockerfile
 from simfix.fixer import fix_requirements_with_uv
 from simfix.planner import create_install_plan
@@ -764,3 +765,81 @@ def test_fix_conda_environment_file_returns_none_without_environment(
     result = fix_conda_environment_file(tmp_path)
 
     assert result is None
+
+
+def test_detect_gpu_project_from_requirements(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        "torch\nnumpy\n",
+        encoding="utf-8",
+    )
+
+    assert detect_gpu_project(tmp_path) is True
+
+
+def test_detect_gpu_project_from_cuda_file(tmp_path: Path) -> None:
+    (tmp_path / "kernel.cu").write_text(
+        "__global__ void test_kernel() {}\n",
+        encoding="utf-8",
+    )
+
+    assert detect_gpu_project(tmp_path) is True
+
+
+def test_create_cuda_dockerfile_does_not_overwrite_existing_file(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        "torch\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "Dockerfile").write_text(
+        "FROM ubuntu:22.04\n",
+        encoding="utf-8",
+    )
+
+    result = create_cuda_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is False
+    assert result.file_path.read_text(encoding="utf-8") == "FROM ubuntu:22.04\n"
+
+
+def test_create_cuda_dockerfile(tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "requirements.txt").write_text(
+        "torch\nnumpy\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "simfix.cuda_docker.get_system_info",
+        lambda: SystemInfo(
+            os_name="Linux",
+            os_version="test",
+            linux_distro="Ubuntu",
+            linux_version="22.04",
+            is_wsl=False,
+            architecture="x86_64",
+            python_version="3.12",
+            git_available=True,
+            docker_available=True,
+            nvidia_gpu_available=True,
+            nvidia_driver_version="550.54",
+            nvidia_cuda_version="12.4",
+            cuda_toolkit_version="12.4",
+            pip_available=True,
+            uv_available=True,
+            conda_available=False,
+            mamba_available=False,
+        ),
+    )
+
+    result = create_cuda_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+    assert result.file_path.name == "Dockerfile"
+    assert "NVIDIA GPU detected" in result.message
+
+    dockerfile_text = result.file_path.read_text(encoding="utf-8")
+    assert "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04" in dockerfile_text
+    assert "python3 -m pip install -r /workspace/requirements.txt" in dockerfile_text
