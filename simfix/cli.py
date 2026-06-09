@@ -132,6 +132,7 @@ def doctor(
     table.add_row("Dockerfile", "yes" if analysis.has_dockerfile else "no")
     table.add_row("package.xml / ROS", "yes" if analysis.has_package_xml else "no")
     table.add_row("CMakeLists.txt", "yes" if analysis.has_cmake else "no")
+    table.add_row("setup.py", "yes" if analysis.has_setup_py else "no")
 
     console.print(table)
 
@@ -290,23 +291,38 @@ def doctor(
 
     console.print(plan_table)
 
+    missing_pypi_packages = [
+        result.name for result in pypi_results if not result.exists
+    ]
+
     if "docker" in analysis.detected_ecosystems:
         console.print(
-            "[yellow]Recommendation:[/yellow] Docker installation may be available."
+            "[yellow]Recommendation:[/yellow] "
+            "Docker-based installation may be the safest option."
         )
     elif "ros" in analysis.detected_ecosystems:
         console.print(
             "[yellow]Recommendation:[/yellow] "
-            "Use rosdep or Docker for ROS dependencies."
+            "ROS workspace installation is required."
         )
     elif "python" in analysis.detected_ecosystems:
-        console.print(
-            "[yellow]Recommendation:[/yellow] "
-            "Python environment installation is possible."
-        )
+        if missing_pypi_packages:
+            console.print(
+                "[yellow]Recommendation:[/yellow] "
+                "Python dependencies were found, but some packages are not "
+                "available on PyPI. Manual/vendor installation may be required."
+            )
+            console.print(
+                "[yellow]Missing from PyPI:[/yellow] "
+                + ", ".join(missing_pypi_packages)
+            )
+        else:
+            console.print(
+                "[yellow]Recommendation:[/yellow] "
+                "Python environment installation is possible."
+            )
     else:
         console.print("[yellow]Recommendation:[/yellow] Manual inspection is needed.")
-
     warnings = generate_compatibility_warnings(analysis, system_info)
 
     if warnings:

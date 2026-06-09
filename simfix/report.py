@@ -36,6 +36,7 @@ def generate_markdown_report(
         f"- `Dockerfile`: {_yes_no(analysis.has_dockerfile)}",
         f"- `package.xml`: {_yes_no(analysis.has_package_xml)}",
         f"- `CMakeLists.txt`: {_yes_no(analysis.has_cmake)}",
+        f"- `setup.py`: {_yes_no(analysis.has_setup_py)}",
         "",
         "## System",
         "",

@@ -20,6 +20,7 @@ from simfix.repo import is_git_url, repo_name_from_url
 from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.ros_docker import create_ros_dockerfile
 from simfix.ros_package import parse_ros_package
+from simfix.setup_py import parse_setup_py_dependencies
 from simfix.system import (
     SystemInfo,
     command_exists,
@@ -1010,3 +1011,50 @@ dependencies = [
     assert result is not None
     assert result.changed is False
     assert "uv was not found" in result.message
+
+
+def test_parse_setup_py_dependencies(tmp_path: Path) -> None:
+    setup_py_path = tmp_path / "setup.py"
+    setup_py_path.write_text(
+        """
+from setuptools import setup
+
+setup(
+    name="example",
+    install_requires=[
+        "isaacgym",
+        "numpy==1.23",
+        "torch",
+    ],
+)
+""",
+        encoding="utf-8",
+    )
+
+    dependencies = parse_setup_py_dependencies(setup_py_path)
+
+    assert dependencies == ["isaacgym", "numpy==1.23", "torch"]
+
+
+def test_analyze_repo_detects_setup_py_dependencies(tmp_path: Path) -> None:
+    (tmp_path / "setup.py").write_text(
+        """
+from setuptools import setup
+
+setup(
+    name="example",
+    install_requires=[
+        "isaacgym",
+        "torch",
+    ],
+)
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.has_setup_py is True
+    assert analysis.setup_py_dependencies == ["isaacgym", "torch"]
+    assert "isaacgym" in analysis.all_python_dependencies
+    assert "torch" in analysis.all_python_dependencies
