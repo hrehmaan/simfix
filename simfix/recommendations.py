@@ -50,42 +50,6 @@ def generate_recommendations(
         detect_vendor_dependency_recommendations(normalized_dependencies)
     )
 
-    if has_isaacgym:
-        recommendations.append(
-            Recommendation(
-                category="Vendor-managed dependency",
-                title="NVIDIA Isaac Gym required",
-                status="Manual installation required",
-                reason=(
-                    "The dependency 'isaacgym' was detected, but it is not "
-                    "available as a normal PyPI package."
-                ),
-                suggestion=(
-                    "Install NVIDIA Isaac Gym manually in a compatible Linux "
-                    "environment with NVIDIA GPU support. If the local machine "
-                    "is not suitable, use an HPC GPU node or cloud GPU instance."
-                ),
-            )
-        )
-
-    if has_isaacsim:
-        recommendations.append(
-            Recommendation(
-                category="Vendor-managed dependency",
-                title="NVIDIA Isaac Sim required",
-                status="Manual installation required",
-                reason=(
-                    "Isaac Sim or omni.isaac dependencies were detected. "
-                    "These are NVIDIA-managed dependencies."
-                ),
-                suggestion=(
-                    "Install Isaac Sim using NVIDIA's official installation "
-                    "method. Use a supported system with compatible NVIDIA GPU "
-                    "drivers."
-                ),
-            )
-        )
-
     if has_isaacgym or has_isaacsim or has_cuda_dependency:
         recommendations.append(
             Recommendation(
