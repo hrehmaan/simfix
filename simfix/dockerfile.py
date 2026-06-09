@@ -87,13 +87,16 @@ def parse_dockerfile(path: str | Path) -> DockerfileInfo | None:
 
                 apt_packages.append(package)
 
-        if "pip install" in line or "python -m pip install" in line:
-            install_part = re.split(
-                r"python -m pip install|pip install",
-                line,
-                maxsplit=1,
-            )[-1]
-            tokens = install_part.split()
+        pip_install_matches = re.finditer(
+            r"(?:python\d* -m pip|pip) install (?P<args>.*?)(?:&&|;|$)",
+            line,
+        )
+
+        for match in pip_install_matches:
+            tokens = match.group("args").split()
+
+            if "-r" in tokens or "--requirement" in tokens:
+                continue
 
             for token in tokens:
                 package = _clean_package_token(token)
@@ -104,7 +107,10 @@ def parse_dockerfile(path: str | Path) -> DockerfileInfo | None:
                 if package.startswith("-"):
                     continue
 
-                if package in {"&&", ";"}:
+                if package in {"&&", ";", "python", "python3", "pip", "install"}:
+                    continue
+
+                if package.endswith(".txt") or "/" in package:
                     continue
 
                 pip_packages.append(package)

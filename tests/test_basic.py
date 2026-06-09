@@ -1070,3 +1070,23 @@ def test_normalize_pip_requirement_syntax_converts_single_equals() -> None:
     normalized = normalize_pip_requirement_syntax(text)
 
     assert normalized == "numpy>=1.23\nurdfpy==0.0.22\nscipy\n"
+
+
+def test_parse_dockerfile_ignores_requirements_file_pip_install(
+    tmp_path: Path,
+) -> None:
+    dockerfile_path = tmp_path / "Dockerfile"
+    dockerfile_path.write_text(
+        """
+FROM ubuntu:22.04
+
+RUN python3 -m pip install --upgrade pip && \\
+    python3 -m pip install -r /workspace/requirements.txt
+""",
+        encoding="utf-8",
+    )
+
+    info = parse_dockerfile(dockerfile_path)
+
+    assert info is not None
+    assert info.pip_packages == []
