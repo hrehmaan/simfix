@@ -318,6 +318,10 @@ def system() -> None:
     table.add_row("OS version", info.os_version)
     table.add_row("Architecture", info.architecture)
     table.add_row("Python", info.python_version)
+    table.add_row("Pip", "found" if info.pip_available else "not found")
+    table.add_row("Uv", "found" if info.uv_available else "not found")
+    table.add_row("Conda", "found" if info.conda_available else "not found")
+    table.add_row("Mamba", "found" if info.mamba_available else "not found")
     table.add_row("Git", "found" if info.git_available else "not found")
     table.add_row("Docker", "found" if info.docker_available else "not found")
     table.add_row(

@@ -131,6 +131,10 @@ def test_docker_warning_when_docker_missing(tmp_path: Path) -> None:
         git_available=True,
         docker_available=False,
         nvidia_gpu_available=False,
+        pip_available=True,
+        uv_available=False,
+        conda_available=False,
+        mamba_available=False,
     )
 
     warnings = generate_compatibility_warnings(analysis, system_info)
@@ -150,6 +154,10 @@ def test_ros_warning_on_macos(tmp_path: Path) -> None:
         git_available=True,
         docker_available=True,
         nvidia_gpu_available=False,
+        pip_available=True,
+        uv_available=False,
+        conda_available=False,
+        mamba_available=False,
     )
 
     warnings = generate_compatibility_warnings(analysis, system_info)
@@ -367,6 +375,10 @@ def test_generate_markdown_report(tmp_path: Path) -> None:
         git_available=True,
         docker_available=False,
         nvidia_gpu_available=False,
+        pip_available=True,
+        uv_available=False,
+        conda_available=False,
+        mamba_available=False,
     )
 
     report = generate_markdown_report(
@@ -457,3 +469,36 @@ dependencies = ["matplotlib", "numpy"]
     analysis = analyze_repo(tmp_path)
 
     assert analysis.all_python_dependencies == ["numpy", "matplotlib"]
+
+
+def test_conda_warning_when_conda_and_mamba_missing(tmp_path: Path) -> None:
+    (tmp_path / "environment.yml").write_text(
+        """
+name: sim-env
+dependencies:
+  - python=3.10
+  - numpy
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+    system_info = SystemInfo(
+        os_name="Linux",
+        os_version="test",
+        architecture="x86_64",
+        python_version="3.12",
+        git_available=True,
+        docker_available=True,
+        nvidia_gpu_available=False,
+        pip_available=True,
+        uv_available=False,
+        conda_available=False,
+        mamba_available=False,
+    )
+
+    warnings = generate_compatibility_warnings(analysis, system_info)
+
+    assert (
+        "Conda environment detected, but neither conda nor mamba was found." in warnings
+    )
