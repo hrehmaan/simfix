@@ -29,6 +29,12 @@ from simfix.report import generate_markdown_report, write_markdown_report
 from simfix.ros_docker import create_ros_dockerfile
 from simfix.ros_package import parse_ros_package
 from simfix.setup_py import parse_setup_py_dependencies
+from simfix.cuda import (
+    CudaVersionInfo,
+    _detect_cuda_version_from_text,
+    _parse_nvidia_smi_cuda_version,
+    is_cuda_version_mismatch,
+)
 
 from typer.testing import CliRunner
 
@@ -1285,3 +1291,61 @@ def test_recommendations_do_not_warn_when_gpu_docker_runtime_exists() -> None:
     titles = [recommendation.title for recommendation in recommendations]
 
     assert "NVIDIA Docker support not detected" not in titles
+
+
+def test_detect_cuda_version_from_nvidia_docker_image() -> None:
+    text = "FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04"
+
+    assert _detect_cuda_version_from_text(text) == (12, 4)
+
+
+def test_detect_cuda_version_from_compact_dependency() -> None:
+    text = "cupy-cuda12x\nsome-package-cu118"
+
+    assert _detect_cuda_version_from_text(text) == (12, 0)
+
+
+def test_parse_nvidia_smi_cuda_version() -> None:
+    text = "NVIDIA-SMI 535.104.05    Driver Version: 535.104.05    CUDA Version: 12.2"
+
+    assert _parse_nvidia_smi_cuda_version(text) == (12, 2)
+
+
+def test_cuda_version_mismatch_detected() -> None:
+    assert is_cuda_version_mismatch((12, 4), (12, 2))
+
+
+def test_cuda_version_mismatch_not_detected_when_system_is_newer() -> None:
+    assert not is_cuda_version_mismatch((12, 1), (12, 4))
+
+
+def test_recommendations_warn_for_cuda_version_mismatch() -> None:
+    recommendations = generate_recommendations(
+        dependencies=["cupy-cuda12x"],
+        detected_ecosystems=["python"],
+        cuda_version_info=CudaVersionInfo(
+            repo_cuda_version=(12, 4),
+            system_cuda_version=(12, 2),
+            repo_cuda_source="Dockerfile",
+        ),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "CUDA version mismatch detected" in titles
+
+
+def test_recommendations_warn_when_repo_cuda_known_but_system_cuda_unknown() -> None:
+    recommendations = generate_recommendations(
+        dependencies=[],
+        detected_ecosystems=["docker"],
+        cuda_version_info=CudaVersionInfo(
+            repo_cuda_version=(12, 4),
+            system_cuda_version=None,
+            repo_cuda_source="Dockerfile",
+        ),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "System CUDA support not detected" in titles
