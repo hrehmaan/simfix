@@ -118,6 +118,33 @@ def doctor(repo: str) -> None:
 
         console.print(docker_table)
 
+    if analysis.ros_package_info is not None:
+        ros_info = analysis.ros_package_info
+
+        ros_table = Table(title="ROS package info")
+        ros_table.add_column("Field", style="cyan")
+        ros_table.add_column("Value", style="green")
+
+        ros_table.add_row("Package name", ros_info.name or "-")
+        ros_table.add_row(
+            "Build tool dependencies",
+            "\n".join(ros_info.build_tool_dependencies) or "-",
+        )
+        ros_table.add_row(
+            "Build dependencies",
+            "\n".join(ros_info.build_dependencies) or "-",
+        )
+        ros_table.add_row(
+            "Execution dependencies",
+            "\n".join(ros_info.execution_dependencies) or "-",
+        )
+        ros_table.add_row(
+            "Test dependencies",
+            "\n".join(ros_info.test_dependencies) or "-",
+        )
+
+        console.print(ros_table)
+
     install_plan = create_install_plan(analysis)
 
     plan_table = Table(title="Install plan")
