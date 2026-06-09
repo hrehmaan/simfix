@@ -8,6 +8,7 @@ from simfix.conda_environment import parse_conda_environment
 from simfix.dockerfile import parse_dockerfile
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
+from simfix.pyproject import parse_pyproject
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
 from simfix.report import generate_markdown_report, write_markdown_report
@@ -387,3 +388,54 @@ def test_write_markdown_report(tmp_path: Path) -> None:
 
     assert written_path == output_path.resolve()
     assert output_path.read_text(encoding="utf-8") == "hello\n"
+
+
+def test_parse_pyproject_project_dependencies(tmp_path: Path) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        """
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+
+[project]
+name = "tiny-sim"
+dependencies = [
+  "numpy>=1.26",
+  "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff",
+]
+""",
+        encoding="utf-8",
+    )
+
+    info = parse_pyproject(pyproject)
+
+    assert info is not None
+    assert info.project_name == "tiny-sim"
+    assert info.dependencies == ["numpy>=1.26", "matplotlib"]
+    assert info.optional_dependencies == {"dev": ["pytest", "ruff"]}
+    assert info.build_system_requires == ["setuptools>=68", "wheel"]
+
+
+def test_analyze_pyproject_repo(tmp_path: Path) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "tiny-sim"
+dependencies = ["numpy"]
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.has_pyproject_toml is True
+    assert "python" in analysis.detected_ecosystems
+    assert analysis.pyproject_info is not None
+    assert analysis.pyproject_info.project_name == "tiny-sim"
+    assert analysis.pyproject_info.dependencies == ["numpy"]

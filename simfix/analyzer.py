@@ -6,6 +6,7 @@ from pathlib import Path
 from simfix.cmake import CMakeInfo, parse_cmake_file
 from simfix.conda_environment import CondaEnvironment, parse_conda_environment
 from simfix.dockerfile import DockerfileInfo, parse_dockerfile
+from simfix.pyproject import PyProjectInfo, parse_pyproject
 from simfix.python_requirements import parse_requirements_file
 from simfix.ros_package import ROSPackageInfo, parse_ros_package
 
@@ -26,6 +27,7 @@ class RepoAnalysis:
     dockerfile_info: DockerfileInfo | None
     ros_package_info: ROSPackageInfo | None
     cmake_info: CMakeInfo | None
+    pyproject_info: PyProjectInfo | None
 
     @property
     def detected_ecosystems(self) -> list[str]:
@@ -71,11 +73,11 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
     dockerfile_path = path / "Dockerfile"
     package_xml_path = path / "package.xml"
     cmake_path = path / "CMakeLists.txt"
+    pyproject_path = path / "pyproject.toml"
 
     return RepoAnalysis(
         repo_path=path,
         has_requirements_txt=requirements_path.exists(),
-        has_pyproject_toml=(path / "pyproject.toml").exists(),
         has_environment_yml=(path / "environment.yml").exists()
         or (path / "environment.yaml").exists(),
         python_requirements=parse_requirements_file(requirements_path),
@@ -86,4 +88,6 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
         ros_package_info=parse_ros_package(package_xml_path),
         has_cmake=cmake_path.exists(),
         cmake_info=parse_cmake_file(cmake_path),
+        has_pyproject_toml=pyproject_path.exists(),
+        pyproject_info=parse_pyproject(pyproject_path),
     )

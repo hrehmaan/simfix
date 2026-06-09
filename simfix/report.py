@@ -68,6 +68,31 @@ def generate_markdown_report(
         )
         lines.extend(f"- `{dependency}`" for dependency in analysis.python_requirements)
 
+    if analysis.pyproject_info is not None:
+        pyproject_info = analysis.pyproject_info
+        lines.extend(
+            [
+                "",
+                "## PyProject",
+                "",
+                f"- Project name: `{pyproject_info.project_name or '-'}`",
+                "",
+                "### Dependencies",
+                "",
+            ]
+        )
+        lines.extend(f"- `{dependency}`" for dependency in pyproject_info.dependencies)
+
+        lines.extend(["", "### Build system requires", ""])
+        lines.extend(
+            f"- `{dependency}`" for dependency in pyproject_info.build_system_requires
+        )
+
+        if pyproject_info.optional_dependencies:
+            lines.extend(["", "### Optional dependencies", ""])
+            for group, dependencies in pyproject_info.optional_dependencies.items():
+                lines.append(f"- `{group}`: {', '.join(dependencies)}")
+
     if analysis.conda_environment is not None:
         conda_env = analysis.conda_environment
         lines.extend(
