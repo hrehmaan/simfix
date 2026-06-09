@@ -145,6 +145,22 @@ def doctor(repo: str) -> None:
 
         console.print(ros_table)
 
+    if analysis.cmake_info is not None:
+        cmake_info = analysis.cmake_info
+
+        cmake_table = Table(title="CMake info")
+        cmake_table.add_column("Field", style="cyan")
+        cmake_table.add_column("Value", style="green")
+
+        cmake_table.add_row("Project name", cmake_info.project_name or "-")
+        cmake_table.add_row("Minimum version", cmake_info.minimum_version or "-")
+        cmake_table.add_row(
+            "Found packages",
+            "\n".join(cmake_info.found_packages) or "-",
+        )
+
+        console.print(cmake_table)
+
     install_plan = create_install_plan(analysis)
 
     plan_table = Table(title="Install plan")

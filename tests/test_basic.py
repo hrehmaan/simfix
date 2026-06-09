@@ -2,6 +2,7 @@ from pathlib import Path
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.cmake import parse_cmake_file
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
 from simfix.dockerfile import parse_dockerfile
@@ -308,3 +309,44 @@ def test_analyze_ros_package_repo(tmp_path: Path) -> None:
     assert "ros" in analysis.detected_ecosystems
     assert analysis.ros_package_info is not None
     assert analysis.ros_package_info.name == "tiny_robot_sim"
+
+
+def test_parse_cmake_file(tmp_path: Path) -> None:
+    cmake_file = tmp_path / "CMakeLists.txt"
+    cmake_file.write_text(
+        """
+cmake_minimum_required(VERSION 3.16)
+project(tiny_simulator)
+
+find_package(OpenGL REQUIRED)
+find_package(SDL2 REQUIRED)
+find_package(Freetype REQUIRED)
+""",
+        encoding="utf-8",
+    )
+
+    info = parse_cmake_file(cmake_file)
+
+    assert info is not None
+    assert info.minimum_version == "3.16"
+    assert info.project_name == "tiny_simulator"
+    assert info.found_packages == ["OpenGL", "SDL2", "Freetype"]
+
+
+def test_analyze_cmake_repo(tmp_path: Path) -> None:
+    (tmp_path / "CMakeLists.txt").write_text(
+        """
+cmake_minimum_required(VERSION 3.16)
+project(tiny_simulator)
+find_package(OpenGL REQUIRED)
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.has_cmake is True
+    assert "cmake/c++" in analysis.detected_ecosystems
+    assert analysis.cmake_info is not None
+    assert analysis.cmake_info.project_name == "tiny_simulator"
+    assert analysis.cmake_info.found_packages == ["OpenGL"]

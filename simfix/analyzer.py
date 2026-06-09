@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from simfix.cmake import CMakeInfo, parse_cmake_file
 from simfix.conda_environment import CondaEnvironment, parse_conda_environment
 from simfix.dockerfile import DockerfileInfo, parse_dockerfile
 from simfix.python_requirements import parse_requirements_file
@@ -24,6 +25,7 @@ class RepoAnalysis:
     conda_environment: CondaEnvironment | None
     dockerfile_info: DockerfileInfo | None
     ros_package_info: ROSPackageInfo | None
+    cmake_info: CMakeInfo | None
 
     @property
     def detected_ecosystems(self) -> list[str]:
@@ -68,6 +70,7 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
 
     dockerfile_path = path / "Dockerfile"
     package_xml_path = path / "package.xml"
+    cmake_path = path / "CMakeLists.txt"
 
     return RepoAnalysis(
         repo_path=path,
@@ -75,11 +78,12 @@ def analyze_repo(repo_path: str | Path) -> RepoAnalysis:
         has_pyproject_toml=(path / "pyproject.toml").exists(),
         has_environment_yml=(path / "environment.yml").exists()
         or (path / "environment.yaml").exists(),
-        has_cmake=(path / "CMakeLists.txt").exists(),
         python_requirements=parse_requirements_file(requirements_path),
         conda_environment=parse_conda_environment(environment_path),
         has_dockerfile=dockerfile_path.exists(),
         dockerfile_info=parse_dockerfile(dockerfile_path),
         has_package_xml=package_xml_path.exists(),
         ros_package_info=parse_ros_package(package_xml_path),
+        has_cmake=cmake_path.exists(),
+        cmake_info=parse_cmake_file(cmake_path),
     )
