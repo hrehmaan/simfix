@@ -11,6 +11,7 @@ from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
 from simfix.recommendations import generate_recommendations
+from simfix.system_capabilities import SystemCapabilities
 from simfix.fixer import (
     extract_direct_pin_conflict,
     fix_pyproject_with_uv,
@@ -1252,3 +1253,35 @@ def test_recommendations_do_not_warn_for_old_dependencies_on_python_310() -> Non
     titles = [recommendation.title for recommendation in recommendations]
 
     assert "Older pinned dependencies detected" not in titles
+
+
+def test_recommendations_warn_when_gpu_docker_runtime_missing() -> None:
+    recommendations = generate_recommendations(
+        dependencies=["cupy-cuda12x", "torch"],
+        detected_ecosystems=["python"],
+        system_capabilities=SystemCapabilities(
+            has_docker=True,
+            has_nvidia_smi=True,
+            has_nvidia_container_runtime=False,
+        ),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "NVIDIA Docker support not detected" in titles
+
+
+def test_recommendations_do_not_warn_when_gpu_docker_runtime_exists() -> None:
+    recommendations = generate_recommendations(
+        dependencies=["cupy-cuda12x", "torch"],
+        detected_ecosystems=["python"],
+        system_capabilities=SystemCapabilities(
+            has_docker=True,
+            has_nvidia_smi=True,
+            has_nvidia_container_runtime=True,
+        ),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "NVIDIA Docker support not detected" not in titles

@@ -15,6 +15,7 @@ from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
 from simfix.report import generate_markdown_report, write_markdown_report
+from simfix.system_capabilities import detect_system_capabilities
 from simfix.system import get_system_info
 from simfix.recommendations import generate_recommendations
 
@@ -120,6 +121,7 @@ def recommendations(repo: str) -> None:
     repo_recommendations = generate_recommendations(
         dependencies=analysis.all_python_dependencies,
         detected_ecosystems=analysis.detected_ecosystems,
+        system_capabilities=detect_system_capabilities(),
     )
 
     console.print("[bold]SimFix Recommendations[/bold]")
@@ -405,6 +407,7 @@ def doctor(
     repo_recommendations = generate_recommendations(
         dependencies=analysis.all_python_dependencies,
         detected_ecosystems=analysis.detected_ecosystems,
+        system_capabilities=detect_system_capabilities(),
     )
 
     if repo_recommendations:

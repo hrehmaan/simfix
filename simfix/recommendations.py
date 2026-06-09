@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from simfix.system_capabilities import SystemCapabilities
 import sys
 
 
@@ -19,6 +20,7 @@ def generate_recommendations(
     dependencies: list[str],
     detected_ecosystems: list[str],
     python_version: tuple[int, int] | None = None,
+    system_capabilities: SystemCapabilities | None = None,
 ) -> list[Recommendation]:
     """Generate safe system and vendor dependency recommendations.
 
@@ -137,6 +139,27 @@ def generate_recommendations(
             )
         )
 
+    if has_cuda_dependency and system_capabilities is not None:
+        if (
+            system_capabilities.has_docker
+            and not system_capabilities.has_nvidia_container_runtime
+        ):
+            recommendations.append(
+                Recommendation(
+                    category="GPU containers",
+                    title="NVIDIA Docker support not detected",
+                    status="Configuration check recommended",
+                    reason=(
+                        "This repository appears to need GPU/CUDA support, and Docker "
+                        "is available, but NVIDIA container runtime support was not detected."
+                    ),
+                    suggestion=(
+                        "GPU containers may fail with '--gpus all'. Use a compatible "
+                        "Linux/NVIDIA environment with NVIDIA Container Toolkit configured, "
+                        "or use an HPC/cloud GPU environment."
+                    ),
+                )
+            )
     return recommendations
 
 
