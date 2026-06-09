@@ -6,6 +6,7 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from simfix.conda_fixer import fix_conda_environment_file
 from simfix.ros_docker import create_ros_dockerfile
 
 
@@ -102,6 +103,14 @@ def fix_repo(repo_path: str | Path) -> CombinedFixResult:
 
         if requirements_result.changed:
             changed_files.append(requirements_result.file_path)
+
+    conda_result = fix_conda_environment_file(repo_path)
+
+    if conda_result is not None:
+        messages.append(conda_result.message)
+
+        if conda_result.changed:
+            changed_files.append(conda_result.file_path)
 
     ros_result = create_ros_dockerfile(repo_path)
 
