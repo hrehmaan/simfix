@@ -220,6 +220,7 @@ def doctor(
         ros_table.add_column("Value", style="green")
 
         ros_table.add_row("Package name", ros_info.name or "-")
+        ros_table.add_row("Build system", ros_info.build_system or "-")
         ros_table.add_row(
             "Build tool dependencies",
             "\n".join(ros_info.build_tool_dependencies) or "-",
