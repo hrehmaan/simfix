@@ -140,6 +140,35 @@ def doctor(
 
         console.print(pypi_table)
 
+    if analysis.pyproject_info is not None:
+        pyproject_info = analysis.pyproject_info
+
+        pyproject_table = Table(title="PyProject info")
+        pyproject_table.add_column("Field", style="cyan")
+        pyproject_table.add_column("Value", style="green")
+
+        pyproject_table.add_row("Project name", pyproject_info.project_name or "-")
+        pyproject_table.add_row(
+            "Dependencies",
+            "\n".join(pyproject_info.dependencies) or "-",
+        )
+        pyproject_table.add_row(
+            "Build system requires",
+            "\n".join(pyproject_info.build_system_requires) or "-",
+        )
+
+        if pyproject_info.optional_dependencies:
+            optional_text = "\n".join(
+                f"{group}: {', '.join(deps)}"
+                for group, deps in pyproject_info.optional_dependencies.items()
+            )
+        else:
+            optional_text = "-"
+
+        pyproject_table.add_row("Optional dependencies", optional_text)
+
+        console.print(pyproject_table)
+
     if analysis.conda_environment is not None:
         conda_env = analysis.conda_environment
 
