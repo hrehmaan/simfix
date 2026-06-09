@@ -54,6 +54,10 @@ def fix_requirements_with_uv(repo_path: str | Path) -> FixResult | None:
         )
 
     old_text = requirements_path.read_text(encoding="utf-8")
+    normalized_text = normalize_pip_requirement_syntax(old_text)
+
+    if normalized_text != old_text:
+        requirements_path.write_text(normalized_text, encoding="utf-8")
 
     with tempfile.TemporaryDirectory() as temporary_directory:
         output_path = Path(temporary_directory) / "requirements.txt"
@@ -145,6 +149,34 @@ def fix_pyproject_with_uv(repo_path: str | Path) -> FixResult | None:
         changed=True,
         message="Created requirements.txt from pyproject.toml using uv.",
     )
+
+
+def normalize_pip_requirement_syntax(text: str) -> str:
+    """Normalize simple invalid pip requirement syntax.
+
+    Converts package=version to package==version.
+    """
+    normalized_lines: list[str] = []
+
+    for line in text.splitlines():
+        stripped = line.strip()
+
+        if (
+            stripped
+            and not stripped.startswith("#")
+            and "=" in stripped
+            and "==" not in stripped
+            and ">=" not in stripped
+            and "<=" not in stripped
+            and "!=" not in stripped
+            and "~=" not in stripped
+        ):
+            name, version = stripped.split("=", maxsplit=1)
+            normalized_lines.append(f"{name.strip()}=={version.strip()}")
+        else:
+            normalized_lines.append(line)
+
+    return "\n".join(normalized_lines) + "\n"
 
 
 def fix_repo(repo_path: str | Path) -> CombinedFixResult:

@@ -10,7 +10,11 @@ from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
-from simfix.fixer import fix_pyproject_with_uv, fix_requirements_with_uv
+from simfix.fixer import (
+    fix_pyproject_with_uv,
+    fix_requirements_with_uv,
+    normalize_pip_requirement_syntax,
+)
 from simfix.git_assets import fix_git_assets
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
@@ -1058,3 +1062,11 @@ setup(
     assert analysis.setup_py_dependencies == ["isaacgym", "torch"]
     assert "isaacgym" in analysis.all_python_dependencies
     assert "torch" in analysis.all_python_dependencies
+
+
+def test_normalize_pip_requirement_syntax_converts_single_equals() -> None:
+    text = "numpy>=1.23\nurdfpy=0.0.22\nscipy\n"
+
+    normalized = normalize_pip_requirement_syntax(text)
+
+    assert normalized == "numpy>=1.23\nurdfpy==0.0.22\nscipy\n"
