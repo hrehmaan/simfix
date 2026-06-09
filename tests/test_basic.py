@@ -175,6 +175,7 @@ def test_ros_warning_on_macos(tmp_path: Path) -> None:
     warnings = generate_compatibility_warnings(analysis, system_info)
 
     assert any("ROS project detected" in warning for warning in warnings)
+    assert analysis.ros_package_info.build_system == "catkin"
 
 
 def test_parse_conda_environment(tmp_path: Path) -> None:
@@ -531,3 +532,41 @@ def test_get_linux_os_release_returns_tuple() -> None:
 
 def test_is_windows_subsystem_for_linux_returns_bool() -> None:
     assert isinstance(is_windows_subsystem_for_linux(), bool)
+
+
+def test_ros_noetic_ubuntu_mismatch_warning(tmp_path: Path) -> None:
+    (tmp_path / "package.xml").write_text(
+        """
+<package format="2">
+  <name>tiny_robot_sim</name>
+  <version>0.1.0</version>
+  <description>Tiny ROS simulator test package.</description>
+  <maintainer email="test@example.com">Test User</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+</package>
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+    system_info = SystemInfo(
+        os_name="Linux",
+        os_version="test",
+        linux_distro="Ubuntu",
+        linux_version="22.04",
+        is_wsl=False,
+        architecture="x86_64",
+        python_version="3.12",
+        git_available=True,
+        docker_available=True,
+        nvidia_gpu_available=False,
+        pip_available=True,
+        uv_available=False,
+        conda_available=False,
+        mamba_available=False,
+    )
+
+    warnings = generate_compatibility_warnings(analysis, system_info)
+
+    assert any("ROS noetic project detected" in warning for warning in warnings)

@@ -3,6 +3,39 @@ from __future__ import annotations
 from simfix.analyzer import RepoAnalysis
 from simfix.system import SystemInfo
 
+ROS_UBUNTU_HINTS = {
+    "melodic": "18.04",
+    "noetic": "20.04",
+    "humble": "22.04",
+    "jazzy": "24.04",
+}
+
+
+def _detect_ros_distro_hint(analysis: RepoAnalysis) -> str | None:
+    """Detect possible ROS distro hints from parsed dependency names."""
+    if analysis.ros_package_info is None:
+        return None
+
+    dependencies = [
+        dependency.lower() for dependency in analysis.ros_package_info.all_dependencies
+    ]
+
+    joined_dependencies = " ".join(dependencies)
+
+    for distro in ROS_UBUNTU_HINTS:
+        if distro in joined_dependencies:
+            return distro
+
+    ros_info = analysis.ros_package_info
+
+    if ros_info.build_system == "catkin":
+        return "noetic"
+
+    if ros_info.build_system == "ament":
+        return "humble"
+
+    return None
+
 
 def generate_compatibility_warnings(
     analysis: RepoAnalysis,
@@ -35,6 +68,19 @@ def generate_compatibility_warnings(
         warnings.append(
             "ROS project detected, but the current system is not Linux. "
             "Docker or a Linux machine may be needed."
+        )
+
+    ros_distro_hint = _detect_ros_distro_hint(analysis)
+
+    if (
+        ros_distro_hint is not None
+        and system_info.linux_version is not None
+        and ROS_UBUNTU_HINTS[ros_distro_hint] != system_info.linux_version
+    ):
+        warnings.append(
+            f"ROS {ros_distro_hint} project detected, which is commonly used with "
+            f"Ubuntu {ROS_UBUNTU_HINTS[ros_distro_hint]}, but this system appears "
+            f"to be Ubuntu {system_info.linux_version}."
         )
 
     if "cmake/c++" in ecosystems and system_info.os_name == "Darwin":

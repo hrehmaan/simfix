@@ -144,6 +144,7 @@ def generate_markdown_report(
                 "## ROS package",
                 "",
                 f"- Name: `{ros_info.name or '-'}`",
+                f"- Build system: `{ros_info.build_system or '-'}`",
                 "",
                 "### Dependencies",
                 "",
