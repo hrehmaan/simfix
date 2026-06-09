@@ -6,6 +6,7 @@ from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
+from simfix.system import command_exists, get_system_info
 
 
 def test_version() -> None:
@@ -97,3 +98,15 @@ def test_create_docker_install_plan(tmp_path: Path) -> None:
 
     assert plan.recommended_mode == "docker"
     assert "Dockerfile" in plan.reason
+
+
+def test_command_exists_for_python() -> None:
+    assert command_exists("python") or command_exists("python3")
+
+
+def test_get_system_info() -> None:
+    info = get_system_info()
+
+    assert info.os_name
+    assert info.architecture
+    assert info.python_version
