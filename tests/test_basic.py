@@ -11,9 +11,11 @@ from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
 from simfix.fixer import (
+    extract_direct_pin_conflict,
     fix_pyproject_with_uv,
     fix_requirements_with_uv,
     normalize_pip_requirement_syntax,
+    remove_direct_requirement_pin,
 )
 from simfix.git_assets import fix_git_assets
 from simfix.planner import create_install_plan
@@ -1090,3 +1092,28 @@ RUN python3 -m pip install --upgrade pip && \\
 
     assert info is not None
     assert info.pip_packages == []
+
+
+def test_extract_direct_pin_conflict() -> None:
+    error_text = (
+        "Because urdfpy==0.0.22 depends on networkx==2.2 and "
+        "you require urdfpy==0.0.22, we can conclude that you "
+        "require networkx==2.2. And because you require "
+        "networkx==3.1, we can conclude that your requirements "
+        "are unsatisfiable."
+    )
+
+    conflict = extract_direct_pin_conflict(error_text)
+
+    assert conflict == "networkx"
+
+
+def test_remove_direct_requirement_pin() -> None:
+    requirements_text = "urdfpy==0.0.22\n" "networkx==3.1\n" "numpy==1.23\n"
+
+    fixed_text = remove_direct_requirement_pin(
+        requirements_text,
+        "networkx",
+    )
+
+    assert fixed_text == "urdfpy==0.0.22\nnumpy==1.23\n"

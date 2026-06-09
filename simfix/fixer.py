@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -33,6 +34,49 @@ class FixResult:
     file_path: Path
     changed: bool
     message: str
+
+
+def extract_direct_pin_conflict(error_text: str) -> str | None:
+    """Extract the directly pinned package causing a uv conflict.
+
+    Example uv message:
+    Because urdfpy==0.0.22 depends on networkx==2.2 ...
+    And because you require networkx==3.1, ...
+    returns: "networkx"
+    """
+    dependency_match = re.search(
+        r"depends on ([A-Za-z0-9_.-]+)==[A-Za-z0-9_.!+-]+",
+        error_text,
+    )
+
+    if dependency_match is None:
+        return None
+
+    dependency_name = dependency_match.group(1).lower()
+
+    required_matches = re.findall(
+        r"you require ([A-Za-z0-9_.-]+)==[A-Za-z0-9_.!+-]+",
+        error_text,
+    )
+
+    for required_name in required_matches:
+        if required_name.lower() == dependency_name:
+            return required_name
+
+    return None
+
+
+def remove_direct_requirement_pin(
+    requirements_text: str,
+    package_name: str,
+) -> str:
+    """Remove a direct exact-version pin from requirements text."""
+    pattern = re.compile(
+        rf"^\s*{re.escape(package_name)}\s*==\s*[^\s#]+.*\n?",
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+
+    return pattern.sub("", requirements_text)
 
 
 def fix_requirements_with_uv(repo_path: str | Path) -> FixResult | None:
@@ -78,10 +122,65 @@ def fix_requirements_with_uv(repo_path: str | Path) -> FixResult | None:
         )
 
         if result.returncode != 0:
+            error_text = result.stderr.strip() or result.stdout.strip()
+            conflicting_package = extract_direct_pin_conflict(error_text)
+
+            if conflicting_package is not None:
+                current_text = requirements_path.read_text(encoding="utf-8")
+                fixed_text = remove_direct_requirement_pin(
+                    current_text,
+                    conflicting_package,
+                )
+
+                if fixed_text != current_text:
+                    requirements_path.write_text(fixed_text, encoding="utf-8")
+
+                    retry_result = subprocess.run(
+                        [
+                            "uv",
+                            "pip",
+                            "compile",
+                            str(requirements_path),
+                            "--upgrade",
+                            "-o",
+                            str(output_path),
+                        ],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                    )
+
+                    if retry_result.returncode == 0:
+                        new_text = output_path.read_text(encoding="utf-8")
+                        requirements_path.write_text(new_text, encoding="utf-8")
+
+                        return FixResult(
+                            file_path=requirements_path,
+                            changed=True,
+                            message=(
+                                "requirements.txt conflict repaired by removing "
+                                f"the direct {conflicting_package} pin and letting "
+                                "uv resolve the compatible version."
+                            ),
+                        )
+
+                    return FixResult(
+                        file_path=requirements_path,
+                        changed=True,
+                        message=(
+                            f"Removed direct {conflicting_package} pin, "
+                            "but uv still failed: "
+                            + (
+                                retry_result.stderr.strip()
+                                or retry_result.stdout.strip()
+                            )
+                        ),
+                    )
+
             return FixResult(
                 file_path=requirements_path,
                 changed=False,
-                message=result.stderr.strip() or "uv failed to resolve requirements.",
+                message=error_text or "uv failed to resolve requirements.",
             )
 
         new_text = output_path.read_text(encoding="utf-8")

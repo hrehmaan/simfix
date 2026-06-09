@@ -1,43 +1,71 @@
 # SimFix
 
-SimFix is a smart dependency checker and installer assistant for simulator repositories.
+SimFix is a dependency checker and installation assistant for simulator repositories.
 
-The goal of SimFix is to help users diagnose common installation problems in simulator projects by inspecting repository files, detecting dependency systems, checking Python packages, and generating a basic installation plan.
+It helps users diagnose common installation problems by inspecting repository files, detecting dependency systems, checking Python packages, identifying system requirements, and suggesting a safe installation plan.
 
-SimFix is designed for projects where installation often fails because of missing dependencies, version conflicts, system mismatches, or unclear setup instructions.
+SimFix is designed for simulator projects where installation can fail because of missing dependencies, version conflicts, GPU/CUDA requirements, ROS dependencies, Docker setup issues, or unclear setup instructions.
 
-## Current features
+## Features
 
-* Analyze a local repository path
-* Analyze a GitHub/GitLab repository URL by cloning it into a local workspace
-* Detect common dependency files:
+SimFix can analyze both local repositories and remote GitHub/GitLab repositories.
 
-  * `requirements.txt`
-  * `pyproject.toml`
-  * `environment.yml`
-  * `Dockerfile`
-  * `package.xml`
-  * `CMakeLists.txt`
-* Parse Python dependencies from `requirements.txt`
-* Check Python packages on PyPI
-* Generate a basic installation plan
-* Show basic system diagnostics:
+It currently supports:
 
-  * OS
-  * architecture
-  * Python version
-  * Git availability
-  * Docker availability
-  * NVIDIA GPU availability
+* Local repository analysis
+* GitHub/GitLab repository analysis by cloning into a local workspace
+* Dependency file detection
+* Python dependency parsing
+* PyPI package checks
+* Basic installation planning
+* System diagnostics
+* Safe dependency fixes for selected file types
+* Docker helper generation for supported simulator projects
 
-Currently supported by `simfix fix`:
+## Supported dependency files
 
-- `requirements.txt` resolution using `uv`
-- `environment.yml` cleanup
-- CUDA/GPU Dockerfile creation
-- ROS `package.xml` Dockerfile creation
+SimFix can detect and inspect:
 
-For GPU projects, SimFix can create a CUDA Dockerfile. The host machine still needs a working NVIDIA driver and NVIDIA Container Toolkit to run GPU containers.
+* `requirements.txt`
+* `setup.py`
+* `pyproject.toml`
+* `environment.yml` / `environment.yaml`
+* `Dockerfile`
+* `package.xml`
+* `CMakeLists.txt`
+
+## System diagnostics
+
+SimFix can report:
+
+* Operating system
+* CPU architecture
+* Python version
+* Git availability
+* Docker availability
+* Conda/mamba availability
+* NVIDIA GPU availability
+* NVIDIA driver information
+* CUDA toolkit availability
+
+## Automatic fixes
+
+The `simfix fix` command currently supports:
+
+* Resolving `requirements.txt` with `uv`
+* Normalizing invalid pip syntax such as `package=version` to `package==version`
+* Repairing clear resolver conflicts by removing direct conflicting pins and letting `uv` choose compatible versions
+* Cleaning duplicate dependencies in `environment.yml`
+* Creating CUDA/GPU Dockerfiles for GPU-based simulator projects
+* Creating ROS Dockerfiles from `package.xml`
+* Creating general system dependency Dockerfiles for CMake/C++ simulator projects
+* Initializing Git submodules
+* Pulling Git LFS assets when Git LFS is available
+* Creating a Docker run helper script
+
+For GPU projects, SimFix can create a CUDA-based Dockerfile. The host machine still needs a working NVIDIA driver and NVIDIA Container Toolkit to run GPU containers.
+
+SimFix does not automatically install vendor software such as NVIDIA Isaac Gym, Isaac Sim, CUDA drivers, or system-level GPU drivers. These dependencies must be installed manually.
 
 ## Installation for development
 
@@ -68,57 +96,70 @@ Check your system:
 simfix system
 ```
 
-Analyze a local repository:
+Analyze a repository:
+
+```bash
+simfix doctor <repo>
+```
+
+Example:
 
 ```bash
 simfix doctor ../simfix_test
 ```
+
+Analyze a repository and show detected metadata:
+
 ```bash
-simfix analyze ../simfix_test
+simfix analyze <repo>
 ```
 
-To get the report
-```bash
-simfix doctor ../simfix_test --report
-```
 Generate an installation plan:
 
 ```bash
-simfix plan ../simfix_test
+simfix plan <repo>
 ```
+
+Generate a Markdown report:
+
+```bash
+simfix doctor <repo> --report
+```
+
 Show suggested installation commands without running them:
 
 ```bash
-simfix commands ../simfix_test
+simfix commands <repo>
 ```
 
-Fix Python dependency versions in place:
+Apply supported automatic fixes:
 
 ```bash
-simfix fix ../simfix_test
-
+simfix fix <repo>
 ```
-The usage section should now show:
 
-```text
-fix
-simfix system
-simfix analyze <repo>
-simfix plan <repo>
-simfix doctor <repo>
-simfix doctor <repo> --report
-simfix version
-simfix command
-```
-Analyze a GitHub repository:
+Analyze a remote GitHub repository:
 
 ```bash
 simfix doctor https://github.com/hrehmaan/simfix.git
 ```
 
-Show the installed version:
+Show the installed SimFix version:
 
 ```bash
+simfix version
+```
+
+## Main commands
+
+```text
+simfix system
+simfix doctor <repo>
+simfix doctor <repo> --report
+simfix analyze <repo>
+simfix plan <repo>
+simfix commands <repo>
+simfix fix <repo>
 simfix version
 ```
 
@@ -130,6 +171,7 @@ Repository: /path/to/repository
 
 Detected dependency files
 requirements.txt: yes
+setup.py: yes
 pyproject.toml: no
 environment.yml: no
 Dockerfile: no
@@ -149,7 +191,43 @@ PyPI check
 Install plan
 Recommended mode: python
 Reason: Python dependency files were found.
+
+Recommendation:
+Python environment installation is possible.
 ```
+
+## Example: fixing a Python dependency conflict
+
+If a repository contains conflicting Python requirements such as:
+
+```text
+urdfpy==0.0.22
+networkx==3.1
+```
+
+and the resolver reports that `urdfpy==0.0.22` requires `networkx==2.2`, SimFix does not blindly choose a version itself.
+
+Instead, SimFix removes the direct conflicting pin and lets `uv` resolve the compatible version.
+
+This keeps the resolver as the authority and avoids hard-coding risky downgrades.
+
+## Example: vendor dependency detection
+
+Some simulator dependencies are not available on PyPI. For example, NVIDIA Isaac Gym is a vendor dependency and cannot be installed with:
+
+```bash
+python -m pip install isaacgym
+```
+
+In such cases, SimFix reports the missing package and indicates that manual installation is required.
+
+For these projects, the correct setup may require:
+
+* Linux
+* NVIDIA GPU
+* NVIDIA driver
+* CUDA support
+* Vendor SDK installation
 
 ## Development checks
 
@@ -165,22 +243,10 @@ Run pre-commit:
 pre-commit run --all-files
 ```
 
-## Roadmap
-
-Planned features:
-
-* Better Python dependency parsing
-* PyPI version compatibility checks
-* Conda environment parsing
-* Dockerfile analysis
-* ROS dependency analysis with `rosdep`
-* CMake dependency hints
-* GPU/CUDA diagnostics
-* Automatic report generation
-* Safe installation commands for supported dependency types
-
 ## Project status
 
-SimFix is in early development. At this stage, it focuses on diagnosis and installation planning rather than fully automatic installation.
+SimFix is in early development.
 
-The long-term goal is to make simulator setup easier by combining repository analysis, system diagnostics, dependency checks, and safe installation guidance.
+The current focus is safe repository analysis, dependency diagnosis, installation planning, and targeted automatic fixes for common simulator setup problems.
+
+The long-term goal is to make simulator setup easier by combining repository analysis, system diagnostics, dependency checks, resolver-based repair, Docker guidance, and clear manual-install warnings for vendor dependencies.
