@@ -45,7 +45,7 @@ from simfix.system import (
 
 
 def test_version() -> None:
-    assert __version__ == "0.1.2"
+    assert __version__ == "0.1.3"
 
 
 def test_analyze_python_repo(tmp_path: Path) -> None:
