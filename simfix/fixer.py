@@ -94,6 +94,59 @@ def fix_requirements_with_uv(repo_path: str | Path) -> FixResult | None:
     )
 
 
+def fix_pyproject_with_uv(repo_path: str | Path) -> FixResult | None:
+    """Resolve pyproject.toml dependencies into requirements.txt using uv.
+
+    This creates requirements.txt only when pyproject.toml exists and
+    requirements.txt does not already exist.
+    """
+    path = Path(repo_path).expanduser().resolve()
+    pyproject_path = path / "pyproject.toml"
+    requirements_path = path / "requirements.txt"
+
+    if not pyproject_path.exists():
+        return None
+
+    if requirements_path.exists():
+        return None
+
+    if not _command_exists("uv"):
+        return FixResult(
+            file_path=requirements_path,
+            changed=False,
+            message=("uv was not found. Install it with: " "python -m pip install uv"),
+        )
+
+    result = subprocess.run(
+        [
+            "uv",
+            "pip",
+            "compile",
+            str(pyproject_path),
+            "--upgrade",
+            "-o",
+            str(requirements_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        return FixResult(
+            file_path=requirements_path,
+            changed=False,
+            message=result.stderr.strip()
+            or "uv failed to resolve pyproject.toml dependencies.",
+        )
+
+    return FixResult(
+        file_path=requirements_path,
+        changed=True,
+        message="Created requirements.txt from pyproject.toml using uv.",
+    )
+
+
 def fix_repo(repo_path: str | Path) -> CombinedFixResult:
     """Run all supported fixers for a repository."""
     messages: list[str] = []
@@ -106,6 +159,13 @@ def fix_repo(repo_path: str | Path) -> CombinedFixResult:
 
         if requirements_result.changed:
             changed_files.append(requirements_result.file_path)
+
+    pyproject_result = fix_pyproject_with_uv(repo_path)
+    if pyproject_result is not None:
+        messages.append(pyproject_result.message)
+
+        if pyproject_result.changed:
+            changed_files.append(pyproject_result.file_path)
 
     conda_result = fix_conda_environment_file(repo_path)
 
