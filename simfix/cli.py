@@ -116,16 +116,18 @@ def doctor(
     ecosystems = ", ".join(analysis.detected_ecosystems)
     console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
 
-    if analysis.python_requirements:
+    python_dependencies = analysis.all_python_dependencies
+
+    if python_dependencies:
         deps_table = Table(title="Python packages")
         deps_table.add_column("Dependency", style="cyan")
 
-        for dependency in analysis.python_requirements:
+        for dependency in python_dependencies:
             deps_table.add_row(dependency)
 
         console.print(deps_table)
 
-        pypi_results = check_pypi_packages(analysis.python_requirements)
+        pypi_results = check_pypi_packages(python_dependencies)
 
         pypi_table = Table(title="PyPI check")
         pypi_table.add_column("Package", style="cyan")

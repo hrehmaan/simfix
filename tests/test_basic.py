@@ -439,3 +439,21 @@ dependencies = ["numpy"]
     assert analysis.pyproject_info is not None
     assert analysis.pyproject_info.project_name == "tiny-sim"
     assert analysis.pyproject_info.dependencies == ["numpy"]
+
+
+def test_all_python_dependencies_combines_requirements_and_pyproject(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "tiny-sim"
+dependencies = ["matplotlib", "numpy"]
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.all_python_dependencies == ["numpy", "matplotlib"]

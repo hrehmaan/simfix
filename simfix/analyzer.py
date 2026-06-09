@@ -30,6 +30,16 @@ class RepoAnalysis:
     pyproject_info: PyProjectInfo | None
 
     @property
+    def all_python_dependencies(self) -> list[str]:
+        """Return Python dependencies from requirements.txt and pyproject.toml."""
+        dependencies = list(self.python_requirements)
+
+        if self.pyproject_info is not None:
+            dependencies.extend(self.pyproject_info.dependencies)
+
+        return list(dict.fromkeys(dependencies))
+
+    @property
     def detected_ecosystems(self) -> list[str]:
         """Return detected project ecosystems."""
         ecosystems: list[str] = []
