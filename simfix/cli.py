@@ -11,6 +11,7 @@ from simfix.analyzer import analyze_repo
 from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
+from simfix.system import get_system_info
 
 app = typer.Typer(
     name="simfix",
@@ -102,6 +103,29 @@ def doctor(repo: str) -> None:
         )
     else:
         console.print("[yellow]Recommendation:[/yellow] Manual inspection is needed.")
+
+
+@app.command()
+def system() -> None:
+    """Show basic system diagnostics."""
+    info = get_system_info()
+
+    table = Table(title="System check")
+    table.add_column("Item", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("OS", info.os_name)
+    table.add_row("OS version", info.os_version)
+    table.add_row("Architecture", info.architecture)
+    table.add_row("Python", info.python_version)
+    table.add_row("Git", "found" if info.git_available else "not found")
+    table.add_row("Docker", "found" if info.docker_available else "not found")
+    table.add_row(
+        "NVIDIA GPU",
+        "detected" if info.nvidia_gpu_available else "not detected",
+    )
+
+    console.print(table)
 
 
 @app.command()
