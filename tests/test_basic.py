@@ -1220,3 +1220,35 @@ def test_doctor_does_not_show_recommendations_hint_for_simple_repo(
 
     assert result.exit_code == 0
     assert "System/vendor recommendations found" not in result.output
+
+
+def test_recommendations_warn_for_old_dependencies_on_new_python() -> None:
+    recommendations = generate_recommendations(
+        dependencies=[
+            "numpy==1.23.0",
+            "networkx==2.2",
+            "urdfpy==0.0.22",
+        ],
+        detected_ecosystems=["python"],
+        python_version=(3, 13),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "Older pinned dependencies detected" in titles
+
+
+def test_recommendations_do_not_warn_for_old_dependencies_on_python_310() -> None:
+    recommendations = generate_recommendations(
+        dependencies=[
+            "numpy==1.23.0",
+            "networkx==2.2",
+            "urdfpy==0.0.22",
+        ],
+        detected_ecosystems=["python"],
+        python_version=(3, 10),
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "Older pinned dependencies detected" not in titles

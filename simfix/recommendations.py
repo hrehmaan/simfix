@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import sys
 
 
 @dataclass(frozen=True)
@@ -17,6 +18,7 @@ class Recommendation:
 def generate_recommendations(
     dependencies: list[str],
     detected_ecosystems: list[str],
+    python_version: tuple[int, int] | None = None,
 ) -> list[Recommendation]:
     """Generate safe system and vendor dependency recommendations.
 
@@ -26,8 +28,10 @@ def generate_recommendations(
     recommendations: list[Recommendation] = []
 
     normalized_dependencies = [dependency.lower() for dependency in dependencies]
-
     normalized_ecosystems = [ecosystem.lower() for ecosystem in detected_ecosystems]
+
+    if python_version is None:
+        python_version = sys.version_info[:2]
 
     has_isaacgym = any(
         "isaacgym" in dependency for dependency in normalized_dependencies
@@ -40,6 +44,10 @@ def generate_recommendations(
         _has_cuda_keyword(dependency) for dependency in normalized_dependencies
     )
     has_ros = "ros" in normalized_ecosystems
+
+    has_old_pinned_dependency = any(
+        _has_old_pinned_dependency(dependency) for dependency in normalized_dependencies
+    )
 
     if has_isaacgym:
         recommendations.append(
@@ -112,6 +120,23 @@ def generate_recommendations(
             )
         )
 
+    if has_old_pinned_dependency and python_version >= (3, 13):
+        recommendations.append(
+            Recommendation(
+                category="Python environment",
+                title="Older pinned dependencies detected",
+                status="Python version compatibility check recommended",
+                reason=(
+                    "This repository contains older pinned dependencies that may "
+                    f"not install cleanly on Python {python_version[0]}.{python_version[1]}."
+                ),
+                suggestion=(
+                    "Use Python 3.10 or 3.11 in a virtual environment for better "
+                    "compatibility before installing the project dependencies."
+                ),
+            )
+        )
+
     return recommendations
 
 
@@ -129,3 +154,67 @@ def _has_cuda_keyword(dependency: str) -> bool:
     ]
 
     return any(keyword in dependency for keyword in cuda_keywords)
+
+
+def _has_old_pinned_dependency(dependency: str) -> bool:
+    """Return True when a dependency is pinned to an old version.
+
+    This is a conservative heuristic used for Python-version compatibility
+    recommendations. It does not modify dependencies.
+    """
+    normalized = dependency.lower().strip()
+
+    if "==" not in normalized:
+        return False
+
+    package_name, version = normalized.split("==", maxsplit=1)
+    package_name = package_name.strip()
+    version = version.strip()
+
+    old_version_thresholds = {
+        "numpy": (1, 24),
+        "scipy": (1, 10),
+        "networkx": (3, 0),
+        "pandas": (2, 0),
+        "matplotlib": (3, 7),
+        "gym": (1, 0),
+        "urdfpy": (0, 1),
+    }
+
+    if package_name not in old_version_thresholds:
+        return False
+
+    parsed_version = _parse_version_prefix(version)
+    if parsed_version is None:
+        return False
+
+    return parsed_version < old_version_thresholds[package_name]
+
+
+def _parse_version_prefix(version: str) -> tuple[int, ...] | None:
+    """Parse the numeric prefix of a dependency version.
+
+    Examples:
+        1.23.0 -> (1, 23, 0)
+        2.2 -> (2, 2)
+        0.0.22 -> (0, 0, 22)
+    """
+    parts: list[int] = []
+
+    for part in version.split("."):
+        number = ""
+        for character in part:
+            if character.isdigit():
+                number += character
+            else:
+                break
+
+        if not number:
+            break
+
+        parts.append(int(number))
+
+    if not parts:
+        return None
+
+    return tuple(parts)
