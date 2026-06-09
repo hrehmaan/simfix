@@ -7,6 +7,7 @@ from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
 from simfix.dockerfile import parse_dockerfile
+from simfix.fixer import fix_requirements_with_uv
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.pyproject import parse_pyproject
@@ -620,3 +621,26 @@ def test_create_docker_command_plan(tmp_path: Path) -> None:
 
     assert command_plan.title == "Docker installation commands"
     assert any("docker build" in command for command in command_plan.commands)
+
+
+def test_fix_requirements_with_uv_returns_none_without_requirements(
+    tmp_path: Path,
+) -> None:
+    result = fix_requirements_with_uv(tmp_path)
+
+    assert result is None
+
+
+def test_fix_requirements_with_uv_reports_missing_uv(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    (tmp_path / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    monkeypatch.setattr("simfix.fixer._command_exists", lambda command: False)
+
+    result = fix_requirements_with_uv(tmp_path)
+
+    assert result is not None
+    assert result.changed is False
+    assert "uv was not found" in result.message
