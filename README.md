@@ -188,3 +188,24 @@ pre-commit run --all-files
 SimFix is in early development.
 
 The goal is to make simulator setup easier by combining repository analysis, system diagnostics, dependency checks, resolver-based repair, Docker guidance, and clear warnings for manual/vendor dependencies.
+
+## Contributing
+
+Contributions are welcome.
+
+Before opening a pull request, please first create an issue describing the bug, feature request, or improvement you want to work on. This helps avoid duplicate work and makes it easier to discuss the best solution before implementation.
+
+Recommended contribution workflow:
+
+```bash
+# 1. Create an issue on GitHub first
+# 2. Fork the repository
+# 3. Create a new branch
+git checkout -b fix-or-feature-name
+
+# 4. Make your changes
+# 5. Run checks
+pytest
+pre-commit run --all-files
+
+# 6. Open a pull request and link it to the issue
