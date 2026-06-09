@@ -10,6 +10,7 @@ from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
+from simfix.recommendations import generate_recommendations
 from simfix.fixer import (
     extract_direct_pin_conflict,
     fix_pyproject_with_uv,
@@ -1117,3 +1118,47 @@ def test_remove_direct_requirement_pin() -> None:
     )
 
     assert fixed_text == "urdfpy==0.0.22\nnumpy==1.23\n"
+
+
+def test_generate_recommendations_detects_isaacgym() -> None:
+    recommendations = generate_recommendations(
+        dependencies=["isaacgym", "torch"],
+        detected_ecosystems=["python"],
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "NVIDIA Isaac Gym required" in titles
+    assert "CUDA-compatible environment recommended" in titles
+
+
+def test_generate_recommendations_detects_isaacsim() -> None:
+    recommendations = generate_recommendations(
+        dependencies=["omni.isaac.core"],
+        detected_ecosystems=["python"],
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "NVIDIA Isaac Sim required" in titles
+    assert "CUDA-compatible environment recommended" in titles
+
+
+def test_generate_recommendations_detects_ros() -> None:
+    recommendations = generate_recommendations(
+        dependencies=[],
+        detected_ecosystems=["ros"],
+    )
+
+    titles = [recommendation.title for recommendation in recommendations]
+
+    assert "ROS environment required" in titles
+
+
+def test_generate_recommendations_empty_for_simple_python_project() -> None:
+    recommendations = generate_recommendations(
+        dependencies=["numpy", "matplotlib"],
+        detected_ecosystems=["python"],
+    )
+
+    assert recommendations == []
