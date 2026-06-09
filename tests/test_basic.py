@@ -8,6 +8,7 @@ from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
 from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
+from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
 from simfix.fixer import fix_requirements_with_uv
 from simfix.git_assets import fix_git_assets
@@ -899,3 +900,59 @@ def test_fix_git_assets_updates_submodules(tmp_path: Path, monkeypatch) -> None:
     assert result is not None
     assert result.changed is True
     assert "Git submodules updated successfully" in result.message
+
+
+def test_create_docker_run_helper(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text(
+        "FROM ubuntu:22.04\n",
+        encoding="utf-8",
+    )
+
+    result = create_docker_run_helper(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+    assert result.file_path.name == "run_simfix_docker.sh"
+
+    script_text = result.file_path.read_text(encoding="utf-8")
+    assert "docker build" in script_text
+    assert "docker run" in script_text
+    assert "--gpus all" not in script_text
+
+
+def test_create_docker_run_helper_with_gpu(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text(
+        "FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "requirements.txt").write_text(
+        "torch\n",
+        encoding="utf-8",
+    )
+
+    result = create_docker_run_helper(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+
+    script_text = result.file_path.read_text(encoding="utf-8")
+    assert "--gpus all" in script_text
+
+
+def test_create_docker_run_helper_does_not_overwrite_existing_script(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "Dockerfile").write_text(
+        "FROM ubuntu:22.04\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "run_simfix_docker.sh").write_text(
+        "# existing script\n",
+        encoding="utf-8",
+    )
+
+    result = create_docker_run_helper(tmp_path)
+
+    assert result is not None
+    assert result.changed is False
+    assert result.file_path.read_text(encoding="utf-8") == "# existing script\n"
