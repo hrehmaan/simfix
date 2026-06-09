@@ -6,6 +6,7 @@ from simfix.cmake import parse_cmake_file
 from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
+from simfix.conda_fixer import fix_conda_environment_file
 from simfix.dockerfile import parse_dockerfile
 from simfix.fixer import fix_requirements_with_uv
 from simfix.planner import create_install_plan
@@ -722,3 +723,44 @@ def test_create_ros_dockerfile_does_not_overwrite_existing_file(
     assert result is not None
     assert result.changed is False
     assert result.file_path.read_text(encoding="utf-8") == "FROM ubuntu:22.04\n"
+
+
+def test_fix_conda_environment_file_updates_in_place(tmp_path: Path) -> None:
+    environment_path = tmp_path / "environment.yml"
+    environment_path.write_text(
+        """
+name: simulator
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - numpy>=1.26
+  - pip
+  - pip:
+      - matplotlib
+      - matplotlib>=3.8
+""",
+        encoding="utf-8",
+    )
+
+    result = fix_conda_environment_file(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+
+    fixed_text = environment_path.read_text(encoding="utf-8")
+
+    assert "numpy>=1.26" in fixed_text
+    assert "matplotlib>=3.8" in fixed_text
+    assert fixed_text.count("numpy") == 1
+    assert fixed_text.count("matplotlib") == 1
+
+
+def test_fix_conda_environment_file_returns_none_without_environment(
+    tmp_path: Path,
+) -> None:
+    result = fix_conda_environment_file(tmp_path)
+
+    assert result is None
