@@ -10,6 +10,7 @@ from simfix import __version__
 from simfix.analyzer import analyze_repo
 from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
+from simfix.fixer import fix_requirements_with_uv
 from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
@@ -325,6 +326,25 @@ def doctor(
         )
         report_path = write_markdown_report(report_text)
         console.print(f"[bold green]Report written to:[/bold green] {report_path}")
+
+
+@app.command()
+def fix(repo: str) -> None:
+    """Fix supported dependency files in place."""
+    repo_path = _resolve_repo_path(repo)
+    result = fix_requirements_with_uv(repo_path)
+
+    console.print("[bold green]SimFix Fix[/bold green]")
+    console.print(f"Repository: {Path(repo_path).resolve()}")
+
+    if result is None:
+        console.print("[yellow]No supported dependency file found to fix yet.[/yellow]")
+        return
+
+    console.print(f"[bold]Updated file:[/bold] {result.file_path}")
+    console.print(f"[bold]Changed:[/bold] {'yes' if result.changed else 'no'}")
+    console.print(f"[bold]Message:[/bold] {result.message}")
+    console.print("[yellow]Review changes with git diff before committing.[/yellow]")
 
 
 @app.command()

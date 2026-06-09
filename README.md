@@ -82,9 +82,17 @@ Show suggested installation commands without running them:
 ```bash
 simfix commands ../simfix_test
 ```
+
+Fix Python dependency versions in place:
+
+```bash
+simfix fix ../simfix_test
+
+```
 The usage section should now show:
 
 ```text
+fix
 simfix system
 simfix analyze <repo>
 simfix plan <repo>
