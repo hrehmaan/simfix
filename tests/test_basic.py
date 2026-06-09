@@ -3,6 +3,7 @@ from pathlib import Path
 from simfix import __version__
 from simfix.analyzer import analyze_repo
 from simfix.cmake import parse_cmake_file
+from simfix.commands import create_command_plan
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
 from simfix.dockerfile import parse_dockerfile
@@ -598,3 +599,24 @@ def test_get_cuda_toolkit_version_returns_optional_string() -> None:
     value = get_cuda_toolkit_version()
 
     assert value is None or isinstance(value, str)
+
+
+def test_create_python_command_plan(tmp_path: Path) -> None:
+    (tmp_path / "requirements.txt").write_text("numpy\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    command_plan = create_command_plan(analysis)
+
+    assert command_plan.title == "Python installation commands"
+    assert "python -m venv .venv" in command_plan.commands
+    assert "python -m pip install -r requirements.txt" in command_plan.commands
+
+
+def test_create_docker_command_plan(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text("FROM ubuntu:22.04\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    command_plan = create_command_plan(analysis)
+
+    assert command_plan.title == "Docker installation commands"
+    assert any("docker build" in command for command in command_plan.commands)

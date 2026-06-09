@@ -77,7 +77,11 @@ Generate an installation plan:
 ```bash
 simfix plan ../simfix_test
 ```
+Show suggested installation commands without running them:
 
+```bash
+simfix commands ../simfix_test
+```
 The usage section should now show:
 
 ```text
@@ -87,6 +91,7 @@ simfix plan <repo>
 simfix doctor <repo>
 simfix doctor <repo> --report
 simfix version
+simfix command
 ```
 Analyze a GitHub repository:
 
