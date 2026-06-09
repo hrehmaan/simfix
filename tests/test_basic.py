@@ -2,11 +2,12 @@ from pathlib import Path
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.compatibility import generate_compatibility_warnings
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
 from simfix.repo import is_git_url, repo_name_from_url
-from simfix.system import command_exists, get_system_info
+from simfix.system import SystemInfo, command_exists, get_system_info
 
 
 def test_version() -> None:
@@ -110,3 +111,41 @@ def test_get_system_info() -> None:
     assert info.os_name
     assert info.architecture
     assert info.python_version
+
+
+def test_docker_warning_when_docker_missing(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text("FROM ubuntu:22.04\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    system_info = SystemInfo(
+        os_name="Linux",
+        os_version="test",
+        architecture="x86_64",
+        python_version="3.12",
+        git_available=True,
+        docker_available=False,
+        nvidia_gpu_available=False,
+    )
+
+    warnings = generate_compatibility_warnings(analysis, system_info)
+
+    assert warnings == ["Dockerfile detected, but Docker was not found on this system."]
+
+
+def test_ros_warning_on_macos(tmp_path: Path) -> None:
+    (tmp_path / "package.xml").write_text("<package></package>\n", encoding="utf-8")
+
+    analysis = analyze_repo(tmp_path)
+    system_info = SystemInfo(
+        os_name="Darwin",
+        os_version="test",
+        architecture="arm64",
+        python_version="3.12",
+        git_available=True,
+        docker_available=True,
+        nvidia_gpu_available=False,
+    )
+
+    warnings = generate_compatibility_warnings(analysis, system_info)
+
+    assert any("ROS project detected" in warning for warning in warnings)

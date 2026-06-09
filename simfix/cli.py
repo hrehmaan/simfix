@@ -8,6 +8,7 @@ from rich.table import Table
 
 from simfix import __version__
 from simfix.analyzer import analyze_repo
+from simfix.compatibility import generate_compatibility_warnings
 from simfix.planner import create_install_plan
 from simfix.pypi import check_pypi_packages
 from simfix.repo import clone_repo, is_git_url
@@ -31,6 +32,7 @@ def doctor(repo: str) -> None:
         repo_path = Path(repo)
 
     analysis = analyze_repo(repo_path)
+    system_info = get_system_info()
 
     console.print("[bold green]SimFix Doctor[/bold green]")
     console.print(f"Repository: {analysis.repo_path}")
@@ -103,6 +105,17 @@ def doctor(repo: str) -> None:
         )
     else:
         console.print("[yellow]Recommendation:[/yellow] Manual inspection is needed.")
+
+    warnings = generate_compatibility_warnings(analysis, system_info)
+
+    if warnings:
+        warning_table = Table(title="Compatibility warnings")
+        warning_table.add_column("Warning", style="yellow")
+
+        for warning in warnings:
+            warning_table.add_row(warning)
+
+        console.print(warning_table)
 
 
 @app.command()
