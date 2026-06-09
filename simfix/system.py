@@ -41,6 +41,52 @@ def is_windows_subsystem_for_linux() -> bool:
     return "microsoft" in text or "wsl" in text
 
 
+def get_nvidia_smi_field(field: str) -> str | None:
+    """Return a single field from nvidia-smi query output."""
+    if not command_exists("nvidia-smi"):
+        return None
+
+    result = subprocess.run(
+        [
+            "nvidia-smi",
+            f"--query-gpu={field}",
+            "--format=csv,noheader",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        return None
+
+    first_line = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
+
+    return first_line.strip() or None
+
+
+def get_cuda_toolkit_version() -> str | None:
+    """Return CUDA toolkit version from nvcc if available."""
+    if not command_exists("nvcc"):
+        return None
+
+    result = subprocess.run(
+        ["nvcc", "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode != 0:
+        return None
+
+    for line in result.stdout.splitlines():
+        if "release" in line:
+            return line.strip()
+
+    return result.stdout.strip() or None
+
+
 @dataclass(frozen=True)
 class SystemInfo:
     """Basic system information relevant for simulator installation."""
@@ -55,6 +101,9 @@ class SystemInfo:
     git_available: bool
     docker_available: bool
     nvidia_gpu_available: bool
+    nvidia_driver_version: str | None
+    nvidia_cuda_version: str | None
+    cuda_toolkit_version: str | None
     pip_available: bool
     uv_available: bool
     conda_available: bool
@@ -95,6 +144,9 @@ def get_system_info() -> SystemInfo:
         git_available=command_exists("git"),
         docker_available=command_exists("docker"),
         nvidia_gpu_available=has_nvidia_gpu(),
+        nvidia_driver_version=get_nvidia_smi_field("driver_version"),
+        nvidia_cuda_version=get_nvidia_smi_field("cuda_version"),
+        cuda_toolkit_version=get_cuda_toolkit_version(),
         pip_available=command_exists("pip") or command_exists("pip3"),
         uv_available=command_exists("uv"),
         conda_available=command_exists("conda"),
