@@ -4,6 +4,7 @@ from simfix import __version__
 from simfix.analyzer import analyze_repo
 from simfix.compatibility import generate_compatibility_warnings
 from simfix.conda_environment import parse_conda_environment
+from simfix.dockerfile import parse_dockerfile
 from simfix.planner import create_install_plan
 from simfix.pypi import normalize_requirement_name
 from simfix.python_requirements import parse_requirements_file
@@ -204,3 +205,49 @@ dependencies:
     assert "conda" in analysis.detected_ecosystems
     assert analysis.conda_environment is not None
     assert analysis.conda_environment.name == "sim-env"
+
+
+def test_parse_dockerfile(tmp_path: Path) -> None:
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text(
+        """
+FROM ubuntu:22.04
+
+RUN apt-get update && apt-get install -y \\
+    git \\
+    cmake \\
+    build-essential
+
+RUN python -m pip install numpy scipy
+""",
+        encoding="utf-8",
+    )
+
+    info = parse_dockerfile(dockerfile)
+
+    assert info is not None
+    assert info.base_images == ["ubuntu:22.04"]
+    assert "git" in info.apt_packages
+    assert "cmake" in info.apt_packages
+    assert "build-essential" in info.apt_packages
+    assert "numpy" in info.pip_packages
+    assert "scipy" in info.pip_packages
+
+
+def test_analyze_docker_repo(tmp_path: Path) -> None:
+    (tmp_path / "Dockerfile").write_text(
+        """
+FROM python:3.12
+
+RUN pip install numpy
+""",
+        encoding="utf-8",
+    )
+
+    analysis = analyze_repo(tmp_path)
+
+    assert analysis.has_dockerfile is True
+    assert "docker" in analysis.detected_ecosystems
+    assert analysis.dockerfile_info is not None
+    assert analysis.dockerfile_info.base_images == ["python:3.12"]
+    assert analysis.dockerfile_info.pip_packages == ["numpy"]
