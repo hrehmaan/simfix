@@ -27,6 +27,7 @@ from simfix.system import (
     get_system_info,
     is_windows_subsystem_for_linux,
 )
+from simfix.system_docker import detect_system_dependency_project, fix_system_dockerfile
 
 
 def test_version() -> None:
@@ -843,3 +844,76 @@ def test_create_cuda_dockerfile(tmp_path: Path, monkeypatch) -> None:
     dockerfile_text = result.file_path.read_text(encoding="utf-8")
     assert "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04" in dockerfile_text
     assert "python3 -m pip install -r /workspace/requirements.txt" in dockerfile_text
+
+
+def test_detect_system_dependency_project_from_cmake(tmp_path: Path) -> None:
+    (tmp_path / "CMakeLists.txt").write_text(
+        """
+cmake_minimum_required(VERSION 3.16)
+project(test_sim)
+find_package(OpenGL REQUIRED)
+find_package(Eigen3 REQUIRED)
+""",
+        encoding="utf-8",
+    )
+
+    assert detect_system_dependency_project(tmp_path) is True
+
+
+def test_fix_system_dockerfile_creates_file(tmp_path: Path) -> None:
+    (tmp_path / "CMakeLists.txt").write_text(
+        """
+cmake_minimum_required(VERSION 3.16)
+project(test_sim)
+find_package(OpenGL REQUIRED)
+""",
+        encoding="utf-8",
+    )
+
+    result = fix_system_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+    assert result.file_path.name == "Dockerfile"
+
+    dockerfile_text = result.file_path.read_text(encoding="utf-8")
+    assert "FROM ubuntu:22.04" in dockerfile_text
+    assert "build-essential" in dockerfile_text
+    assert "cmake" in dockerfile_text
+    assert "libgl1" in dockerfile_text
+
+
+def test_fix_system_dockerfile_updates_existing_file(tmp_path: Path) -> None:
+    (tmp_path / "CMakeLists.txt").write_text(
+        """
+cmake_minimum_required(VERSION 3.16)
+project(test_sim)
+find_package(OpenGL REQUIRED)
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "Dockerfile").write_text(
+        "FROM ubuntu:22.04\n",
+        encoding="utf-8",
+    )
+
+    result = fix_system_dockerfile(tmp_path)
+
+    assert result is not None
+    assert result.changed is True
+
+    dockerfile_text = result.file_path.read_text(encoding="utf-8")
+    assert "Added by SimFix" in dockerfile_text
+    assert "build-essential" in dockerfile_text
+    assert "cmake" in dockerfile_text
+
+
+def test_fix_system_dockerfile_returns_none_for_plain_repo(tmp_path: Path) -> None:
+    (tmp_path / "README.md").write_text(
+        "Simple notes only.\n",
+        encoding="utf-8",
+    )
+
+    result = fix_system_dockerfile(tmp_path)
+
+    assert result is None

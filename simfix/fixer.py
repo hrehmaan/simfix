@@ -9,6 +9,7 @@ from pathlib import Path
 from simfix.conda_fixer import fix_conda_environment_file
 from simfix.cuda_docker import create_cuda_dockerfile
 from simfix.ros_docker import create_ros_dockerfile
+from simfix.system_docker import fix_system_dockerfile
 
 
 @dataclass(frozen=True)
@@ -128,6 +129,13 @@ def fix_repo(repo_path: str | Path) -> CombinedFixResult:
 
         if ros_result.changed:
             changed_files.append(ros_result.file_path)
+
+    system_result = fix_system_dockerfile(repo_path)
+    if system_result is not None:
+        messages.append(system_result.message)
+
+        if system_result.changed:
+            changed_files.append(system_result.file_path)
 
     if not messages:
         messages.append("No supported dependency files found to fix yet.")
