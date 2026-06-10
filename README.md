@@ -26,6 +26,17 @@ simfix system
 
 ## Quick start
 
+Normal user workflow
+
+From any simulator repository:
+```bash
+cd path/to/simulator_repo
+simfix doctor .
+simfix recommendations .
+simfix fix .
+simfix commands .
+```
+
 Analyze a simulator repository:
 
 ```bash
