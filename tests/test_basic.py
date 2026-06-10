@@ -11,7 +11,7 @@ from simfix.cuda_docker import create_cuda_dockerfile, detect_gpu_project
 from simfix.docker_runner import create_docker_run_helper
 from simfix.dockerfile import parse_dockerfile
 from simfix.recommendations import generate_recommendations
-
+from simfix.workspace_summary import summarize_workspace
 from simfix.vendor_dependencies import detect_vendor_dependency_recommendations
 from simfix.system_capabilities import SystemCapabilities
 from simfix.fixer import (
@@ -1485,3 +1485,37 @@ def test_detect_ros_environment_info_from_nested_workspace(tmp_path: Path) -> No
     assert info.project_type == "ROS 1 / catkin"
     assert info.recommended_distribution == "Noetic"
     assert info.recommended_ubuntu == "Ubuntu 20.04"
+
+
+def test_summarize_workspace_detects_multiple_ros_packages(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+
+    package_a = repo / "global_planner"
+    package_b = repo / "planner_msgs"
+
+    package_a.mkdir(parents=True)
+    package_b.mkdir(parents=True)
+
+    (package_a / "package.xml").write_text(
+        """
+        <package format="2">
+          <name>global_planner</name>
+        </package>
+        """,
+        encoding="utf-8",
+    )
+
+    (package_b / "package.xml").write_text(
+        """
+        <package format="2">
+          <name>planner_msgs</name>
+        </package>
+        """,
+        encoding="utf-8",
+    )
+
+    summary = summarize_workspace(repo)
+
+    package_names = [package.name for package in summary.ros_packages]
+
+    assert package_names == ["global_planner", "planner_msgs"]

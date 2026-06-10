@@ -20,6 +20,7 @@ from simfix.system import get_system_info
 from simfix.recommendations import generate_recommendations
 from simfix.cuda import detect_cuda_version_info
 from simfix.ros_environment import detect_ros_environment_info
+from simfix.workspace_summary import summarize_workspace
 
 console = Console()
 
@@ -212,6 +213,21 @@ def doctor(
 
     ecosystems = ", ".join(analysis.detected_ecosystems)
     console.print(f"[bold]Detected ecosystem(s):[/bold] {ecosystems}")
+
+    workspace_summary = summarize_workspace(analysis.repo_path)
+
+    if workspace_summary.ros_packages:
+        ros_packages_table = Table(title="Detected ROS packages")
+        ros_packages_table.add_column("Package", style="cyan")
+        ros_packages_table.add_column("Path")
+
+        for package in workspace_summary.ros_packages:
+            ros_packages_table.add_row(
+                package.name,
+                str(package.path.relative_to(analysis.repo_path)),
+            )
+
+        console.print(ros_packages_table)
 
     python_dependencies = analysis.all_python_dependencies
     pypi_results = []
