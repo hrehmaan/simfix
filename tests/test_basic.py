@@ -639,8 +639,9 @@ def test_create_python_command_plan(tmp_path: Path) -> None:
     analysis = analyze_repo(tmp_path)
     command_plan = create_command_plan(analysis)
 
-    assert command_plan.title == "Python installation commands"
+    assert command_plan.title == "Suggested installation commands"
     assert "python -m venv .venv" in command_plan.commands
+    assert "source .venv/bin/activate" in command_plan.commands
     assert "python -m pip install -r requirements.txt" in command_plan.commands
 
 
@@ -650,8 +651,13 @@ def test_create_docker_command_plan(tmp_path: Path) -> None:
     analysis = analyze_repo(tmp_path)
     command_plan = create_command_plan(analysis)
 
-    assert command_plan.title == "Docker installation commands"
-    assert any("docker build" in command for command in command_plan.commands)
+    assert command_plan.title == "Suggested installation commands"
+    assert any(
+        command.startswith("docker build -t ") for command in command_plan.commands
+    )
+    assert any(
+        command.startswith("docker run --rm -it ") for command in command_plan.commands
+    )
 
 
 def test_fix_requirements_with_uv_returns_none_without_requirements(
@@ -1451,3 +1457,31 @@ def test_vendor_dependency_recommendations_ignore_normal_python_packages() -> No
     recommendations = detect_vendor_dependency_recommendations(["numpy", "matplotlib"])
 
     assert recommendations == []
+
+
+def test_detect_ros_environment_info_from_nested_workspace(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    package = repo / "planner_gazebo_sim"
+    package.mkdir(parents=True)
+
+    (package / "package.xml").write_text(
+        """
+        <package format="2">
+          <name>planner_gazebo_sim</name>
+          <buildtool_depend>catkin</buildtool_depend>
+          <depend>roscpp</depend>
+        </package>
+        """,
+        encoding="utf-8",
+    )
+    (package / "CMakeLists.txt").write_text(
+        "find_package(catkin REQUIRED)",
+        encoding="utf-8",
+    )
+
+    info = detect_ros_environment_info(repo)
+
+    assert info is not None
+    assert info.project_type == "ROS 1 / catkin"
+    assert info.recommended_distribution == "Noetic"
+    assert info.recommended_ubuntu == "Ubuntu 20.04"

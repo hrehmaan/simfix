@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from simfix.dependency_discovery import discover_dependency_files
 
 
 @dataclass(frozen=True)
@@ -21,17 +22,22 @@ def detect_ros_environment_info(repo_path: Path) -> RosEnvironmentInfo | None:
     """Detect ROS project style and recommend a common compatible environment.
 
     This detection is generic and based on build-system signals, not repository
-    names. It does not install ROS or modify files.
+    names. It supports both root-level ROS packages and nested ROS workspaces.
+    It does not install ROS or modify files.
     """
-    package_xml = repo_path / "package.xml"
-    cmake_lists = repo_path / "CMakeLists.txt"
+    discovered_files = discover_dependency_files(repo_path)
 
-    package_text = _read_file(package_xml)
-    cmake_text = _read_file(cmake_lists)
+    package_xml_files = discovered_files.package_xml_files
+    cmake_lists_files = discovered_files.cmake_lists_files
+
+    if not package_xml_files and not cmake_lists_files:
+        return None
+
+    package_text = "\n".join(_read_file(path) for path in package_xml_files)
+    cmake_text = "\n".join(_read_file(path) for path in cmake_lists_files)
     combined_text = f"{package_text}\n{cmake_text}".lower()
 
-    if not combined_text.strip():
-        return None
+    source = _source_label(*package_xml_files, *cmake_lists_files)
 
     if _looks_like_ros2(combined_text):
         return RosEnvironmentInfo(
@@ -39,7 +45,7 @@ def detect_ros_environment_info(repo_path: Path) -> RosEnvironmentInfo | None:
             recommended_distribution="Humble",
             recommended_ubuntu="Ubuntu 22.04",
             recommended_docker_image="osrf/ros:humble-desktop",
-            source=_source_label(package_xml, cmake_lists),
+            source=source,
         )
 
     if _looks_like_ros1(combined_text):
@@ -48,19 +54,16 @@ def detect_ros_environment_info(repo_path: Path) -> RosEnvironmentInfo | None:
             recommended_distribution="Noetic",
             recommended_ubuntu="Ubuntu 20.04",
             recommended_docker_image="osrf/ros:noetic-desktop-full",
-            source=_source_label(package_xml, cmake_lists),
+            source=source,
         )
 
-    if package_xml.exists():
-        return RosEnvironmentInfo(
-            project_type="ROS project",
-            recommended_distribution=None,
-            recommended_ubuntu=None,
-            recommended_docker_image=None,
-            source="package.xml",
-        )
-
-    return None
+    return RosEnvironmentInfo(
+        project_type="ROS project",
+        recommended_distribution=None,
+        recommended_ubuntu=None,
+        recommended_docker_image=None,
+        source=source,
+    )
 
 
 def _looks_like_ros2(text: str) -> bool:
@@ -97,10 +100,36 @@ def _read_file(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _pluralize(count: int, singular: str, plural: str) -> str:
+    if count == 1:
+        return f"1 {singular}"
+
+    return f"{count} {plural}"
+
+
 def _source_label(*paths: Path) -> str:
-    existing_paths = [path.name for path in paths if path.exists()]
+    existing_paths = [path for path in paths if path.exists()]
 
     if not existing_paths:
         return "ROS project files"
 
-    return ", ".join(existing_paths)
+    package_xml_count = sum(path.name == "package.xml" for path in existing_paths)
+    cmake_count = sum(path.name == "CMakeLists.txt" for path in existing_paths)
+
+    labels: list[str] = []
+
+    if package_xml_count:
+        labels.append(
+            _pluralize(package_xml_count, "package.xml file", "package.xml files")
+        )
+
+    if cmake_count:
+        labels.append(
+            _pluralize(cmake_count, "CMakeLists.txt file", "CMakeLists.txt files")
+        )
+
+    if labels:
+        return " and ".join(labels)
+
+    unique_names = sorted({path.name for path in existing_paths})
+    return ", ".join(unique_names)
