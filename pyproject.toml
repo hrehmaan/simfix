@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simfix"
-version = "0.1.4"
+version = "0.1.5"
 description = "A dependency checker and installation assistant for simulator repositories."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +39,7 @@ dependencies = [
     "packaging",
     "pyyaml",
     "uv",
+    "tomli; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
